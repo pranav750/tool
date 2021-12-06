@@ -9,7 +9,22 @@ from stem.control import Controller
 from bs4 import BeautifulSoup
 import os
 
+from queue import Queue, Empty
+from bs4 import BeautifulSoup
+from threading import Lock
+from concurrent.futures import ThreadPoolExecutor
+from threading import current_thread
+from urllib.parse import urlparse, urljoin
+from fake_useragent import UserAgent
+from stem.control import Controller
+from stem import Signal
+import requests
+import time
+import os
+import random
+
 from queue import Queue
+from dotenv import load_dotenv
 
 # Add constants
 TORCC_HASH_PASSWORD = "shashank"
@@ -260,3 +275,126 @@ class DarkWebCrawler:
     #             pass
         
     #     return results
+
+class Multi():
+    def __init__(self, base_url):
+
+        self.base_url = base_url
+        self.root_url = '{}://{}'.format(urlparse(self.base_url).scheme, urlparse(self.base_url).netloc)
+        self.links_to_crawl = Queue()
+        self.links_to_crawl.put((self.base_url, 2))
+        self.have_visited = set()
+        self.error_links = set()
+        self.url_lock = Lock()
+        self.pool = ThreadPoolExecutor(max_workers=20)
+        self.proxies = {'http' : 'socks5h://127.0.0.1:9150', 'https' : 'socks5h://127.0.0.1:9150'}
+        
+        
+    def renew_tor_ip(self):
+        with Controller.from_port(port = 9051) as controller:
+            controller.authenticate(password=TOR_PASSWORD)
+            controller.signal(Signal.NEWNYM)
+
+    def get_current_ip(self):
+        try:
+            r = requests.get('http://httpbin.org/ip', proxies = self.proxies)
+        except Exception as e:
+            print (str(e))
+        else:
+            return r.text.split(",")[-1].split('"')[3]
+
+    def parse_links(self, html, depth):
+        soup = BeautifulSoup(html, 'html.parser')
+        links = soup.find_all('a', href=True)
+        print(links)
+        for anchor_tag in soup.find_all('a'):
+            try:
+                link_in_anchor_tag = anchor_tag['href']
+
+                if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited:
+                    if link_in_anchor_tag.startswith('http'):
+                        self.links_to_crawl.put((link_in_anchor_tag, depth-1))
+                    else:
+                        current_link = self.base_url
+                        base_url = current_link
+                        if base_url[-1]=='/':
+                            base_url = current_link[:len(current_link)-1]
+                        if link_in_anchor_tag[0]=='/':
+                            link_in_anchor_tag = link_in_anchor_tag[1:]
+                        self.links_to_crawl.put((link_in_anchor_tag, depth-1))
+            except:
+                pass
+
+        # for link in links:
+        #     url = link['href']
+        #     if url.startswith('/') or url.startswith(self.root_url):
+        #         url = urljoin(self.root_url, url)
+        #         if url not in self.have_visited:
+        #             self.links_to_crawl.put((url, depth-1))
+        #     elif url.startswith('http'):
+        #         if url not in self.have_visited:
+        #             self.links_to_crawl.put((url, depth-1))
+
+ 
+    def scrape_info(self, html):
+        return
+
+    def GET_UA(self):
+        uastrings = ["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.72 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10) AppleWebKit/600.1.25 (KHTML, like Gecko) Version/8.0 Safari/600.1.25",
+                "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0",
+                "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/600.1.17 (KHTML, like Gecko) Version/7.1 Safari/537.85.10",
+                "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko",
+                "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0",
+                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.104 Safari/537.36"
+                ]
+ 
+        return random.choice(uastrings)
+ 
+    def post_scrape_callback(self, res):
+        result_from_callback = res.result()
+        result = result_from_callback[0]
+        depth = result_from_callback[1]
+        print(result)
+        
+        if result and result.status_code == 200:
+            self.parse_links(result.text, depth)
+            self.scrape_info(result.text)
+ 
+    def scrape_page(self, url, headers, depth):
+        try:
+            self.renew_tor_ip()
+            res = requests.get(url, proxies = self.proxies, headers = headers)  
+            print(res)         
+            return (res, depth)
+        except requests.RequestException:
+            return
+        
+    def run_scraper(self):
+        os.startfile(TOR_BROWSER_PATH)
+        time.sleep(10)
+        print("Tor Browser started")
+        while True:
+            try:
+                
+                link_info = self.links_to_crawl.get(timeout=30)
+                target_link = link_info[0]
+                depth = link_info[1]
+                
+                if depth > 0 and target_link not in self.have_visited:
+                    self.have_visited.add(target_link)
+                    self.renew_tor_ip()
+                    headers = {'User-Agent': self.GET_UA()}
+                    print("Scraping URL: {} with User-Agent {} with depth {}".format(target_link, headers['User-Agent'], depth))
+                    job = self.pool.submit(self.scrape_page, target_link, headers, depth)
+                    job.add_done_callback(self.post_scrape_callback)
+                    
+                    
+            except Empty:
+                break
+            except Exception as e:
+                print(e)
+                continue
