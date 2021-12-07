@@ -27,8 +27,8 @@ class DarkWebCrawler:
         
         # socks proxies required for TOR usage
         self.proxies = {
-            'http' : 'socks5h://127.0.0.1:9050', 
-            'https' : 'socks5h://127.0.0.1:9050'
+            'http' : 'socks5h://127.0.0.1:9150', 
+            'https' : 'socks5h://127.0.0.1:9150'
         }
 
     # Get the current IP address to check whether the IP address of tor changed or not.
@@ -73,7 +73,7 @@ class DarkWebCrawler:
             # ua = UserAgent()
             # user_agent = ua.random
             headers = { 'User-Agent': self.GET_UA() }
-            response = requests.get(url, proxies = self.proxies, headers = headers, timeout = 15)
+            response = requests.get(url, proxies = self.proxies, headers = headers, timeout = 20)
 
             # Print that the link is found and return the response and that link is active
             print("Page found.... " + url)     
@@ -104,6 +104,7 @@ class DarkWebCrawler:
         os.startfile(TOR_BROWSER_PATH)
         time.sleep(10)
         print("Tor Browser started")
+        start_time = datetime.now()
 
         # Queue for Breadth First Crawling
         queue = Queue()
@@ -213,7 +214,10 @@ class DarkWebCrawler:
 
             depth -= 1
 
-        return active_links, inactive_links, crawled_links
+        end_time = datetime.now()
+
+
+        return active_links, inactive_links, crawled_links, time_difference(start_time,end_time)
 
 
     # def is_link_alive(self,links):
@@ -266,11 +270,11 @@ class DarkWebCrawler:
     #     return results
 
 class MultiThreaded():
-    def __init__(self, base_url):
+    def __init__(self, base_url,depth):
         self.base_url = base_url
         self.root_url = '{}://{}'.format(urlparse(self.base_url).scheme, urlparse(self.base_url).netloc)
         self.links_to_crawl = Queue()
-        self.links_to_crawl.put((self.base_url, 2))
+        self.links_to_crawl.put((self.base_url, depth))
         self.have_visited = set()
         self.error_links = set()
         self.pool = ThreadPoolExecutor(max_workers=20)
@@ -280,7 +284,7 @@ class MultiThreaded():
         
     def renew_tor_ip(self):
         with Controller.from_port(port = 9051) as controller:
-            controller.authenticate(password=TOR_PASSWORD)
+            controller.authenticate(password=TORCC_HASH_PASSWORD)
             controller.signal(Signal.NEWNYM)
 
     def get_current_ip(self):
@@ -304,7 +308,7 @@ class MultiThreaded():
                 if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited:
                     if link_in_anchor_tag.startswith('http'):
                         self.links_to_crawl.put((link_in_anchor_tag, depth - 1))
-                    elif link_in_anchor_tag.startswith('/') or not link_in_anchor_tag.startswith('.'):
+                    elif link_in_anchor_tag.startswith('/'):
                         base_url = current_link
 
                         if base_url[-1] == '/':
@@ -314,6 +318,15 @@ class MultiThreaded():
                             link_in_anchor_tag = link_in_anchor_tag[1:]
 
                         self.links_to_crawl.put((current_link + '/' + link_in_anchor_tag, depth - 1))
+                    
+                    elif not link_in_anchor_tag.startswith('.'):
+                        base_url = current_link
+
+                        if base_url[-1] == '/':
+                            base_url = current_link[:len(current_link)-1]
+
+                        self.links_to_crawl.put((current_link + '/' + link_in_anchor_tag, depth - 1))
+
             except:
                 pass
 
@@ -375,11 +388,12 @@ class MultiThreaded():
             return (None, depth, url)
         
     def run_scraper(self):
-        start_time = datetime.now()
 
         os.startfile(TOR_BROWSER_PATH)
         time.sleep(10)
         print("Tor Browser started")
+
+        start_time = datetime.now()
 
         while True:
             try:

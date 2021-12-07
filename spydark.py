@@ -35,7 +35,8 @@ if args.dark:
 
     if args.iterative: 
         dark_web_object =  DarkWebCrawler()
-        active_links, inactive_links, crawled_links = dark_web_object.new_crawling(link, args.depth)
+        active_links, inactive_links, crawled_links, time_diff = dark_web_object.new_crawling(link, args.depth)
+        print(time_diff)
 
         if args.json:
             save_json(crawled_links)
@@ -44,6 +45,7 @@ if args.dark:
     elif args.multi:
         dark_web_object = MultiThreaded(args.url, args.depth)
         time_diff, crawled_links = dark_web_object.run_scraper()
+        print(time_diff)
 
 
         if args.json:
