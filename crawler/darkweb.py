@@ -317,7 +317,7 @@ class MultiThreaded():
                         if link_in_anchor_tag[0] == '/':
                             link_in_anchor_tag = link_in_anchor_tag[1:]
 
-                        self.links_to_crawl.put((current_link + '/' + link_in_anchor_tag, depth - 1))
+                        self.links_to_crawl.put((base_url + '/' + link_in_anchor_tag, depth - 1))
                     
                     elif not link_in_anchor_tag.startswith('.'):
                         base_url = current_link
@@ -325,7 +325,7 @@ class MultiThreaded():
                         if base_url[-1] == '/':
                             base_url = current_link[:len(current_link)-1]
 
-                        self.links_to_crawl.put((current_link + '/' + link_in_anchor_tag, depth - 1))
+                        self.links_to_crawl.put((base_url + '/' + link_in_anchor_tag, depth - 1))
 
             except:
                 pass
@@ -376,8 +376,12 @@ class MultiThreaded():
         current_link = result_from_callback[2]
         
         if result != None:
+            print('Found Current Link ' + current_link)
             self.parse_links(result.text, depth, current_link)
             self.scrape_info(result.text, current_link)
+        else:
+            print('Not Found Current Link ' + current_link)
+
  
     def scrape_page(self, url, headers, depth):
         try:
