@@ -1,30 +1,19 @@
 import requests
 import random
 from lxml import html
-
 import time
 from datetime import date, datetime
 from stem import Signal
 from stem.control import Controller
 from bs4 import BeautifulSoup
 import os
-
 from queue import Queue, Empty
-from bs4 import BeautifulSoup
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
 from urllib.parse import urlparse, urljoin
-from fake_useragent import UserAgent
-from stem.control import Controller
-from stem import Signal
-import requests
-import time
-import os
-import random
 
-from queue import Queue
-from dotenv import load_dotenv
+from utils.functions import time_difference
 
 # Add constants
 TORCC_HASH_PASSWORD = "shashank"
@@ -276,18 +265,17 @@ class DarkWebCrawler:
         
     #     return results
 
-class Multi():
+class MultiThreaded():
     def __init__(self, base_url):
-
         self.base_url = base_url
         self.root_url = '{}://{}'.format(urlparse(self.base_url).scheme, urlparse(self.base_url).netloc)
         self.links_to_crawl = Queue()
         self.links_to_crawl.put((self.base_url, 2))
         self.have_visited = set()
         self.error_links = set()
-        self.url_lock = Lock()
         self.pool = ThreadPoolExecutor(max_workers=20)
         self.proxies = {'http' : 'socks5h://127.0.0.1:9150', 'https' : 'socks5h://127.0.0.1:9150'}
+        self.crawled_links = []
         
         
     def renew_tor_ip(self):
@@ -303,25 +291,29 @@ class Multi():
         else:
             return r.text.split(",")[-1].split('"')[3]
 
-    def parse_links(self, html, depth):
+    def parse_links(self, html, depth, current_link):
+
         soup = BeautifulSoup(html, 'html.parser')
+
         links = soup.find_all('a', href=True)
-        print(links)
-        for anchor_tag in soup.find_all('a'):
+
+        for anchor_tag in links:
             try:
                 link_in_anchor_tag = anchor_tag['href']
 
                 if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited:
                     if link_in_anchor_tag.startswith('http'):
-                        self.links_to_crawl.put((link_in_anchor_tag, depth-1))
-                    else:
-                        current_link = self.base_url
+                        self.links_to_crawl.put((link_in_anchor_tag, depth - 1))
+                    elif link_in_anchor_tag.startswith('/') or not link_in_anchor_tag.startswith('.'):
                         base_url = current_link
-                        if base_url[-1]=='/':
+
+                        if base_url[-1] == '/':
                             base_url = current_link[:len(current_link)-1]
-                        if link_in_anchor_tag[0]=='/':
+
+                        if link_in_anchor_tag[0] == '/':
                             link_in_anchor_tag = link_in_anchor_tag[1:]
-                        self.links_to_crawl.put((link_in_anchor_tag, depth-1))
+
+                        self.links_to_crawl.put((current_link + '/' + link_in_anchor_tag, depth - 1))
             except:
                 pass
 
@@ -336,8 +328,18 @@ class Multi():
         #             self.links_to_crawl.put((url, depth-1))
 
  
-    def scrape_info(self, html):
-        return
+    def scrape_info(self, html, current_link):
+        soup = BeautifulSoup(html, 'html.parser')
+        title = soup.find('title').get_text()
+        text = soup.get_text()
+        links = [link['href'] for link in soup.find_all('a', href = True)]
+        link = current_link
+        self.crawled_links.append({
+            'title': title,
+            'text': text,
+            'links': links,
+            'link': link,
+        })
 
     def GET_UA(self):
         uastrings = ["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
@@ -358,29 +360,30 @@ class Multi():
         result_from_callback = res.result()
         result = result_from_callback[0]
         depth = result_from_callback[1]
-        print(result)
+        current_link = result_from_callback[2]
         
-        if result and result.status_code == 200:
-            self.parse_links(result.text, depth)
-            self.scrape_info(result.text)
+        if result != None:
+            self.parse_links(result.text, depth, current_link)
+            self.scrape_info(result.text, current_link)
  
     def scrape_page(self, url, headers, depth):
         try:
             self.renew_tor_ip()
-            res = requests.get(url, proxies = self.proxies, headers = headers)  
-            print(res)         
-            return (res, depth)
-        except requests.RequestException:
-            return
+            res = requests.get(url, proxies = self.proxies, headers = headers)           
+            return (res, depth, url)
+        except:
+            return (None, depth, url)
         
     def run_scraper(self):
+        start_time = datetime.now()
+
         os.startfile(TOR_BROWSER_PATH)
         time.sleep(10)
         print("Tor Browser started")
+
         while True:
             try:
-                
-                link_info = self.links_to_crawl.get(timeout=30)
+                link_info = self.links_to_crawl.get(timeout = 20)
                 target_link = link_info[0]
                 depth = link_info[1]
                 
@@ -391,10 +394,11 @@ class Multi():
                     print("Scraping URL: {} with User-Agent {} with depth {}".format(target_link, headers['User-Agent'], depth))
                     job = self.pool.submit(self.scrape_page, target_link, headers, depth)
                     job.add_done_callback(self.post_scrape_callback)
-                    
-                    
             except Empty:
                 break
             except Exception as e:
                 print(e)
                 continue
+        
+        end_time = datetime.now()
+        return time_difference(start_time, end_time), self.crawled_links

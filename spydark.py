@@ -1,5 +1,5 @@
 import argparse
-from crawler.darkweb import DarkWebCrawler
+from crawler.darkweb import DarkWebCrawler, MultiThreaded
 from utils.functions import save_json
 
 parser = argparse.ArgumentParser()
@@ -33,13 +33,23 @@ if args.dark:
     elif args.keyword:
         link = 'wiki_link/' + args.keyword
 
-    dark_web_object =  DarkWebCrawler()
-    active_links, inactive_links, crawled_links = dark_web_object.new_crawling(link, args.depth)
+    if args.iterative: 
+        dark_web_object =  DarkWebCrawler()
+        active_links, inactive_links, crawled_links = dark_web_object.new_crawling(link, args.depth)
 
-    if args.json:
-        save_json(crawled_links)
-    elif args.database:
-        pass
+        if args.json:
+            save_json(crawled_links)
+        elif args.database:
+            pass
+    elif args.multi:
+        dark_web_object = MultiThreaded(args.url, args.depth)
+        time_diff, crawled_links = dark_web_object.run_scraper()
+
+
+        if args.json:
+            save_json(crawled_links)
+        elif args.database:
+            pass
 
 elif args.surface:
     print(f'Crawl {args.url} with depth {args.depth}on surface web')
