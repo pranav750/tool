@@ -30,8 +30,8 @@ if args.dark:
         link = 'wiki_link/' + args.keyword
 
     if args.iterative: 
-        dark_web_object =  DarkWebCrawler()
-        result = dark_web_object.new_crawling(link, args.depth)
+        dark_web_object =  DarkWebCrawler(link, args.depth)
+        result = dark_web_object.new_crawling()
         save_json(result)
     elif args.multi:
         dark_web_object = MultiThreaded(args.url, args.depth)

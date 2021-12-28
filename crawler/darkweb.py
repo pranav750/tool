@@ -14,10 +14,13 @@ from threading import current_thread
 from urllib.parse import urlparse, urljoin
 
 from utils.functions import time_difference
+from dotenv import dotenv_values
+
+config = dotenv_values(".env")
 
 # Add constants
-TORCC_HASH_PASSWORD = "shashank"
-TOR_BROWSER_PATH = "C:\\Users\\SHASHANK\\Desktop\\Tor_Browser\\Browser\\firefox.exe"
+TORCC_HASH_PASSWORD = config['TORCC_HASH_PASSWORD']
+TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
 
 class DarkWebCrawler:
     def __init__(self, base_url, depth):
@@ -41,7 +44,7 @@ class DarkWebCrawler:
         
         # global queue
         self.queue = Queue()
-        self.queue.put({ 'url': url, 'parent_link': '' })
+        self.queue.put({ 'url': self.base_url, 'parent_link': '' })
         
         # visited links
         self.have_visited = set()
@@ -117,7 +120,7 @@ class DarkWebCrawler:
  
         return random.choice(uastrings)
 
-    def new_crawling(self, url, depth):
+    def new_crawling(self):
         # Start Tor Browser
         os.startfile(TOR_BROWSER_PATH)
         time.sleep(10)
@@ -128,7 +131,7 @@ class DarkWebCrawler:
         while not self.queue.empty() and depth > 0:
 
             # All the links currently in the queue
-            size = queue.qsize()
+            size = self.queue.qsize()
 
             for _ in range(size):
 
@@ -205,7 +208,7 @@ class DarkWebCrawler:
                                         link_in_anchor_tag = link_in_anchor_tag[1:]
                                         
                                     link = self.base_url + '/' + link_in_anchor_tag
-                                    if link not in self.have_visited
+                                    if link not in self.have_visited:
                                         self.queue.put({ 'url': link, 'parent_link': current_link }) 
                                         links_added += 1
                         except:
@@ -229,7 +232,7 @@ class DarkWebCrawler:
         end_time = datetime.now()
 
         result = {
-            'link': self.base_url
+            'link': self.base_url,
             'active_links': self.active_links,
             'inactive_links': self.inactive_links,
             'time_taken': time_difference(start_time, end_time),
