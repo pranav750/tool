@@ -20,7 +20,7 @@ TORCC_HASH_PASSWORD = "shashank"
 TOR_BROWSER_PATH = "C:\\Users\\SHASHANK\\Desktop\\Tor_Browser\\Browser\\firefox.exe"
 
 class DarkWebCrawler:
-    def __init__(self):
+    def __init__(self, base_url, depth):
 
         # add time delay between each request to avoid DOS attack
         self.wait_time = 1
@@ -30,6 +30,26 @@ class DarkWebCrawler:
             'http' : 'socks5h://127.0.0.1:9150', 
             'https' : 'socks5h://127.0.0.1:9150'
         }
+        
+        # base url
+        self.base_url = base_url
+        if self.base_url[-1] == '/':
+            self.base_url = self.base_url[:len(self.base_url) - 1]
+        
+        #depth
+        self.depth = depth
+        
+        # global queue
+        self.queue = Queue()
+        self.queue.put({ 'url': url, 'parent_link': '' })
+        
+        # visited links
+        self.have_visited = set()
+        
+        # for database
+        self.crawled_links = []
+        self.active_links = 0
+        self.inactive_links = 0
 
     # Get the current IP address to check whether the IP address of tor changed or not.
     def get_current_ip(self):
@@ -70,8 +90,6 @@ class DarkWebCrawler:
             print("IP : {}".format(current_ip))
 
             # Request to the Dark Web URL using a random user agent
-            # ua = UserAgent()
-            # user_agent = ua.random
             headers = { 'User-Agent': self.GET_UA() }
             response = requests.get(url, proxies = self.proxies, headers = headers, timeout = 20)
 
@@ -83,7 +101,7 @@ class DarkWebCrawler:
             print("Page not found... " + url)
             return False, None
 
-    
+    # Random User Agent
     def GET_UA(self):
         uastrings = ["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
                 "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.72 Safari/537.36",
@@ -106,16 +124,8 @@ class DarkWebCrawler:
         print("Tor Browser started")
         start_time = datetime.now()
 
-        # Queue for Breadth First Crawling
-        queue = Queue()
-        queue.put({ 'url': url, 'parent_link': '' })        
-        crawled_links = []      # For database
-        links_crawled_till_now = set()
-
-        active_links = 0
-        inactive_links = 0
-
-        while not queue.empty() and depth > 0:
+        depth = self.depth
+        while not self.queue.empty() and depth > 0:
 
             # All the links currently in the queue
             size = queue.qsize()
@@ -129,78 +139,80 @@ class DarkWebCrawler:
                 database_link_object = dict()
 
                 # Current object in queue
-                current_link_object = queue.get()
+                current_link_object = self.queue.get()
                 current_link = current_link_object['url']
                 parent_link = current_link_object['parent_link']
 
-
-                links_crawled_till_now.add(current_link)
+                self.have_visited.add(current_link)
 
                 # Make request to the current link 
                 link_active, link_response = self.make_request(current_link)
 
                 if link_active:
 
-                    active_links += 1
+                    self.active_links += 1
 
                     soup = BeautifulSoup(link_response.text, 'lxml')
 
                     # Add images in database
-                    image_links = []
+                    # image_links = []
 
                     # Base url should be https://www.example.com
-                    base_url = current_link
-                    if (current_link[-1] == '/'):
-                        base_url = current_link[:len(current_link) - 1]
+                    # base_url = current_link
+                    # if (current_link[-1] == '/'):
+                    #     base_url = current_link[:len(current_link) - 1]
 
-                    for image_tag in soup.find_all('img'):
-                        src_text = image_tag['src']
+                    # for image_tag in soup.find_all('img'):
+                    #     src_text = image_tag['src']
 
-                        if len(src_text) >= 3 and src_text[0:3] == '../':
-                            continue
+                    #     if len(src_text) >= 3 and src_text[0:3] == '../':
+                    #         continue
 
-                        if src_text[0] == '/':
-                            image_links.append(base_url + src_text)
-                        else:
-                            image_links.append(base_url + '/' + src_text)                   
+                    #     if src_text[0] == '/':
+                    #         image_links.append(base_url + src_text)
+                    #     else:
+                    #         image_links.append(base_url + '/' + src_text)                   
 
-                    # self.store_images(image_links,current_link)
+                    # # self.store_images(image_links,current_link)
 
                     # Create Link object to put in Database 
+                    
                     try:
                         database_link_object['title'] = soup.find('title').get_text()
                     except:
                         database_link_object['title'] = ''
+                        
                     database_link_object['link_status'] = link_active
                     database_link_object['link'] = current_link
                     database_link_object['parent_link'] = parent_link
+                    
                     try:
                         database_link_object['text'] = soup.get_text(" ")
                     except:
                         database_link_object['text'] = ''
 
                     links_added = 0
-                    for anchor_tag in soup.find_all('a'):
+                    for anchor_tag in soup.find_all('a', href=True):
                         try:
                             link_in_anchor_tag = anchor_tag['href']
 
-                            if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in links_crawled_till_now and links_added < 100:
+                            if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited and links_added < 100 and link_in_anchor_tag != self.base_url:
                                 if link_in_anchor_tag.startswith('http'):
-                                    queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
+                                    self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
                                     links_added += 1
                                 else:
-                                    base_url = current_link
-                                    if base_url[-1]=='/':
-                                        base_url = current_link[:len(current_link)-1]
                                     if link_in_anchor_tag[0]=='/':
                                         link_in_anchor_tag = link_in_anchor_tag[1:]
-                                    queue.put({ 'url': base_url + '/' + link_in_anchor_tag, 'parent_link': current_link }) 
-                                    links_added += 1
+                                        
+                                    link = self.base_url + '/' + link_in_anchor_tag
+                                    if link not in self.have_visited
+                                        self.queue.put({ 'url': link, 'parent_link': current_link }) 
+                                        links_added += 1
                         except:
                             pass
                 else:
 
-                    inactive_links += 1
+                    self.inactive_links += 1
 
                     # Create Link object to put in Database
                     database_link_object['title'] = ''
@@ -209,15 +221,21 @@ class DarkWebCrawler:
                     database_link_object['parent_link'] = ''
                     database_link_object['text'] = ''
 
-                crawled_links.append(database_link_object)
+                self.crawled_links.append(database_link_object)
                 print('--------------')
 
             depth -= 1
 
         end_time = datetime.now()
 
-
-        return active_links, inactive_links, crawled_links, time_difference(start_time,end_time)
+        result = {
+            'link': self.base_url
+            'active_links': self.active_links,
+            'inactive_links': self.inactive_links,
+            'time_taken': time_difference(start_time, end_time),
+            'crawled_links': self.crawled_links
+        }
+        return result
 
 
     # def is_link_alive(self,links):

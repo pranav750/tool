@@ -16,10 +16,6 @@ multi_or_iterative = parser.add_mutually_exclusive_group()
 multi_or_iterative.add_argument('--multi', action = "store_true", help='Specify if multi-threaded crawling is required')
 multi_or_iterative.add_argument('--iterative', action = "store_true", help='Specify if iterative crawling is required')
 
-save = parser.add_mutually_exclusive_group()
-save.add_argument('--json', action = "store_true", help = "Specify if the data is to be saved in the json file")
-save.add_argument('--database', action = "store_true", help = "Specify is the data is to be saved in database")
-
 parser.add_argument('--depth', type=int, default=1, help='Specify the depth')
 
 args = parser.parse_args()
@@ -35,13 +31,8 @@ if args.dark:
 
     if args.iterative: 
         dark_web_object =  DarkWebCrawler()
-        active_links, inactive_links, crawled_links, time_diff = dark_web_object.new_crawling(link, args.depth)
-        print(time_diff)
-
-        if args.json:
-            save_json(crawled_links)
-        elif args.database:
-            pass
+        result = dark_web_object.new_crawling(link, args.depth)
+        save_json(result)
     elif args.multi:
         dark_web_object = MultiThreaded(args.url, args.depth)
         time_diff, crawled_links = dark_web_object.run_scraper()
