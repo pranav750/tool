@@ -1,6 +1,15 @@
 import argparse
-from crawler.darkweb import DarkWebCrawler, MultiThreaded
-from utils.functions import save_json, link_similarity, link_status_from_result
+from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
+from utils.functions import save_json, link_status_from_result
+import os
+import time
+
+from dotenv import dotenv_values
+
+config = dotenv_values(".env")
+
+TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
+
 
 parser = argparse.ArgumentParser()
 
@@ -15,6 +24,13 @@ url_or_keyword.add_argument('--keyword', type = str, help = 'Specify the Keyword
 multi_or_iterative = parser.add_mutually_exclusive_group()
 multi_or_iterative.add_argument('--multi', action = "store_true", help='Specify if multi-threaded crawling is required')
 multi_or_iterative.add_argument('--iterative', action = "store_true", help='Specify if iterative crawling is required')
+
+
+parser.add_argument('--lsm', action = "store_true", help='Specify the dark web link')
+
+parser.add_argument('--links', nargs='+', help='Specify the dark web link')
+
+parser.add_argument('--lst', action = "store_true", help='Specify the dark web link')
 
 parser.add_argument('--depth', type=int, default=1, help='Specify the depth')
 
@@ -55,11 +71,16 @@ elif args.surface:
 
 elif args.lsm:
     print (f'Link Similarity checking with depth 2')
-    result = link_similarity(links, 2)
+    result = link_similarity(args.links, 2)
     save_json(result)
 
 elif args.lst:
     print('Link Status cheking')
+    link = ''
+    if args.url:
+        link = args.url
+    elif args.keyword:
+        link = 'wiki_link/' + args.keyword
     dark_web_object =  DarkWebCrawler(link, args.depth)
         
     # Start Tor Browser

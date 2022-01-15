@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
 from urllib.parse import urlparse, urljoin
 
-from utils.functions import time_difference, create_wordcloud
+from utils.functions import time_difference, create_wordcloud, links_from_result
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -142,7 +142,6 @@ class DarkWebCrawler:
                 current_link = current_link_object['url']
                 parent_link = current_link_object['parent_link']
 
-                self.have_visited.add(current_link)
 
                 # Make request to the current link 
                 link_active, link_response = self.make_request(current_link)
@@ -193,11 +192,13 @@ class DarkWebCrawler:
                     links_added = 0
                     for anchor_tag in soup.find_all('a', href=True):
                         link_in_anchor_tag = anchor_tag['href']
+                        
 
                         if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited and links_added < 100 and link_in_anchor_tag != self.base_url:
                             if link_in_anchor_tag.startswith('http'):
                                 self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
                                 links_added += 1
+                                self.have_visited.add(link_in_anchor_tag)
                             else:
                                 if link_in_anchor_tag[0]=='/':
                                     link_in_anchor_tag = link_in_anchor_tag[1:]
@@ -206,6 +207,9 @@ class DarkWebCrawler:
                                 if link not in self.have_visited:
                                     self.queue.put({ 'url': link, 'parent_link': current_link }) 
                                     links_added += 1
+                                    self.have_visited.add(link)
+
+                                                
 
                 else:
 
@@ -225,7 +229,7 @@ class DarkWebCrawler:
 
         end_time = datetime.now()
 
-        top_five_keywords = create_wordcloud(crawled_links)
+        top_five_keywords = create_wordcloud(self.crawled_links)
         result = {
             'link': self.base_url,
             'active_links': self.active_links,
@@ -236,55 +240,6 @@ class DarkWebCrawler:
         }
         return result
 
-
-    # def is_link_alive(self,links):
-    #     os.startfile(TOR_BROWSER_PATH)
-    #     time.sleep(10)
-    #     print("Tor Browser started")
-
-    #     results = []
-
-    #     for link in links:
-    #         link_active, link_response = self.make_request(link)
-
-    #         inc_active_value = 0 
-    #         inc_inactive_value = 0
-    #         if link_active:
-    #             inc_active_value = 1
-    #         else:
-    #             inc_inactive_value = 1
-            
-    #         if len(FlaggedLink.objects(link = link)) > 0:
-    #             FlaggedLink.objects(link = link).update_one(
-    #                 push__link_statuses = {'link_status' : link_active, 'checked_at' : datetime.now()},
-    #                 inc__no_of_times_active = inc_active_value ,
-    #                 inc__no_of_times_inactive = inc_inactive_value ,                    
-    #                 )
-
-    #         else:
-    #             result = {
-    #                 'link' : link ,
-    #                 'no_of_times_active' : inc_active_value,
-    #                 'no_of_times_inactive' : inc_inactive_value,
-    #                 'link_statuses': [{
-    #                     'link_status' : link_active,
-    #                     'checked_at' : datetime.now()
-    #                 }]
-    #             }
-    #             print(result)
-    #             serializer = FlaggedLinkSerializer(data = result, many = False)    
-
-    #             if serializer.is_valid():
-    #                 serializer.save()
-    #             else:
-    #                 print(serializer.errors)
-            
-    #         try:
-    #             results.append(FlaggedLink.objects(link = link).first())
-    #         except:
-    #             pass
-        
-    #     return results
 
 class MultiThreaded():
     def __init__(self, base_url,depth):
@@ -437,3 +392,39 @@ class MultiThreaded():
         
         end_time = datetime.now()
         return time_difference(start_time, end_time), self.crawled_links
+
+def link_similarity(links,depth):
+
+        crawled_links_of_url = dict()
+        # Start Tor Browser
+        os.startfile(config['TOR_BROWSER_PATH'])
+        time.sleep(10)
+        print("Tor Browser started")
+        
+        for link in links:
+            dark_web_object =  DarkWebCrawler(link, depth)
+            result = dark_web_object.new_crawling()
+            crawled_links = links_from_result(result)
+            crawled_links_of_url[link] = crawled_links
+
+        result = dict()
+        all_links = []
+
+        for crawled_links in crawled_links_of_url.values():
+            for crawled_link in crawled_links:
+                all_links.append(crawled_link)
+
+        for link in all_links:
+            count = 0
+            result_object = dict()
+            for url, links in crawled_links_of_url.items():
+                if link in links:
+                    count += 1
+                    result_object[url] = True
+                else:
+                    result_object[url] = False
+            percent = round(count/len(crawled_links_of_url) * 100,2)
+            result_object['percent'] = percent
+            result[link] = result_object
+
+        return result
