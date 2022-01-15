@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
 from urllib.parse import urlparse, urljoin
 
-from utils.functions import time_difference
+from utils.functions import time_difference, create_wordcloud
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -196,23 +196,21 @@ class DarkWebCrawler:
 
                     links_added = 0
                     for anchor_tag in soup.find_all('a', href=True):
-                        try:
-                            link_in_anchor_tag = anchor_tag['href']
+                        link_in_anchor_tag = anchor_tag['href']
 
-                            if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited and links_added < 100 and link_in_anchor_tag != self.base_url:
-                                if link_in_anchor_tag.startswith('http'):
-                                    self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
+                        if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited and links_added < 100 and link_in_anchor_tag != self.base_url:
+                            if link_in_anchor_tag.startswith('http'):
+                                self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
+                                links_added += 1
+                            else:
+                                if link_in_anchor_tag[0]=='/':
+                                    link_in_anchor_tag = link_in_anchor_tag[1:]
+                                    
+                                link = self.base_url + '/' + link_in_anchor_tag
+                                if link not in self.have_visited:
+                                    self.queue.put({ 'url': link, 'parent_link': current_link }) 
                                     links_added += 1
-                                else:
-                                    if link_in_anchor_tag[0]=='/':
-                                        link_in_anchor_tag = link_in_anchor_tag[1:]
-                                        
-                                    link = self.base_url + '/' + link_in_anchor_tag
-                                    if link not in self.have_visited:
-                                        self.queue.put({ 'url': link, 'parent_link': current_link }) 
-                                        links_added += 1
-                        except:
-                            pass
+
                 else:
 
                     self.inactive_links += 1
@@ -231,10 +229,12 @@ class DarkWebCrawler:
 
         end_time = datetime.now()
 
+        top_five_keywords = create_wordcloud(crawled_links)
         result = {
             'link': self.base_url,
             'active_links': self.active_links,
             'inactive_links': self.inactive_links,
+            'top_five_keywords': top_five_keywords,
             'time_taken': time_difference(start_time, end_time),
             'crawled_links': self.crawled_links
         }
