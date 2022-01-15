@@ -1,6 +1,6 @@
 import argparse
 from crawler.darkweb import DarkWebCrawler, MultiThreaded
-from utils.functions import save_json, link_similarity
+from utils.functions import save_json, link_similarity, link_status_from_result
 
 parser = argparse.ArgumentParser()
 
@@ -53,7 +53,21 @@ if args.dark:
 elif args.surface:
     print(f'Crawl {args.url} with depth {args.depth}on surface web')
 
-elif args.ls:
+elif args.lsm:
     print (f'Link Similarity checking with depth 2')
     result = link_similarity(links, 2)
     save_json(result)
+
+elif args.lst:
+    print('Link Status cheking')
+    dark_web_object =  DarkWebCrawler(link, args.depth)
+        
+    # Start Tor Browser
+    os.startfile(TOR_BROWSER_PATH)
+    time.sleep(10)
+    print("Tor Browser started")
+        
+    result = dark_web_object.new_crawling()
+    final_result = link_status_from_result(result)
+    save_json(final_result)
+    
