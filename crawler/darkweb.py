@@ -121,10 +121,6 @@ class DarkWebCrawler:
         return random.choice(uastrings)
 
     def new_crawling(self):
-        # Start Tor Browser
-        os.startfile(TOR_BROWSER_PATH)
-        time.sleep(10)
-        print("Tor Browser started")
         start_time = datetime.now()
 
         depth = self.depth

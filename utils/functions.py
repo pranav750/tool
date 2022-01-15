@@ -53,3 +53,49 @@ def texts_from_result(crawled_links):
             pass
 
     return texts
+
+def links_from_result(darkweb_result):
+    links = []
+    for result in darkweb_result['crawled_links']:
+        try:
+            links.append(result['link'])
+        except:
+            pass
+
+    return links
+
+def link_similarity(links):
+
+    crawled_links_of_url = dict()
+    # Start Tor Browser
+    os.startfile(TOR_BROWSER_PATH)
+    time.sleep(10)
+    print("Tor Browser started")
+    
+    for link in links:
+        dark_web_object =  DarkWebCrawler(link, depth)
+        result = dark_web_object.new_crawling()
+        crawled_links = links_from_result(darkweb_url_object)
+        crawled_links_of_url[link] = crawled_links
+
+    result = dict()
+    all_links = []
+
+    for crawled_links in crawled_links_of_url.values():
+        for crawled_link in crawled_links:
+            all_links.append(crawled_link)
+
+    for link in all_links:
+        count = 0
+        result_object = dict()
+        for url, links in crawled_links_of_url.items():
+            if link in links:
+                count += 1
+                result_object[url] = True
+            else:
+                result_object[url] = False
+        percent = round(count/len(crawled_links_of_url) * 100,2)
+        result_object['percent'] = percent
+        result[link] = result_object
+
+    return result
