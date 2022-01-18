@@ -72,20 +72,20 @@ class DarkWebCrawler:
 
     # Store images in the folder 
     def store_images(self, image_links, current_link):
-        create_directory_for_images(current_link)
-        url = urlparse(current_link)
-        folder_name = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', f'Onion_Link_{url.netloc}')
+        create_directory_for_images(self.active_links+self.inactive_links)
+        folder_name = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(self.active_links+self.inactive_links))
+        print(folder_name)
         i=0
         print("Images crawling")
         for image_link in image_links:
             try:
                 image_link_status, image_response = self.make_request(image_link)
-                
-                with open(f"{folder_name}/images{i+1}.jpg", "wb+") as f:
-                    f.write(image_response.content)     
-            except:
-                pass
-            i+=1
+                if image_link_status:
+                    with open(f"{folder_name}/images{i+1}.{image_link.split('.')[-1]}", "wb+") as f:
+                        f.write(image_response.content)  
+                    i+=1
+            except Exception as e:
+                print(str(e))
         print("Images crawling done")
 
     # Make a request to the dark web 
@@ -166,20 +166,24 @@ class DarkWebCrawler:
                     image_links = []
 
                     # Base url should be https://www.example.com
-                    base_url = current_link
-                    if (current_link[-1] == '/'):
-                        base_url = current_link[:len(current_link) - 1]
+                    # base_url = current_link
+                    # if (current_link[-1] == '/'):
+                    #     base_url = current_link[:len(current_link) - 1]
 
                     for image_tag in soup.find_all('img'):
                         src_text = image_tag['src']
-
-                        if len(src_text) >= 3 and src_text[0:3] == '../':
-                            continue
-
-                        if src_text[0] == '/':
-                            image_links.append(base_url + src_text)
+                        if not src_text.startswith('http'):
+                            image_links.append(urljoin(current_link,src_text))
                         else:
-                            image_links.append(base_url + '/' + src_text)                   
+                            image_links.append(src_text)
+
+                    #     if len(src_text) >= 3 and src_text[0:3] == '../':
+                    #         continue
+
+                    #     if src_text[0] == '/':
+                    #         image_links.append(base_url + src_text)
+                    #     else:
+                    #         image_links.append(base_url + '/' + src_text)                   
 
                     self.store_images(image_links,current_link)
 

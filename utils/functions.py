@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import os, shutil
 import time
 from datetime import date, datetime
+import random
 
 from dotenv import dotenv_values
 
@@ -103,9 +104,8 @@ def clear_images_directory():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-def create_directory_for_images(link):
+def create_directory_for_images(number):
     try:
-        url = urlparse(link)
-        os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', f'Onion_Link_{url.netloc}'))
+        os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(number)))
     except:
         print("Folder already created!")
