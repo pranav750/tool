@@ -1,6 +1,6 @@
 import argparse
 from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
-from utils.functions import save_json, link_status_from_result
+from utils.functions import clear_images_directory, save_json, link_status_from_result, create_directory_for_images
 import os
 import time
 
@@ -38,6 +38,8 @@ args = parser.parse_args()
 
 if args.dark:
     print(f'Crawl {args.url} with depth {args.depth} on dark web')
+
+    clear_images_directory()
 
     link = ''
     if args.url:

@@ -1,6 +1,7 @@
 from wordcloud import WordCloud, STOPWORDS
 import json
-import os
+from urllib.parse import urlparse
+import os, shutil
 import time
 from datetime import date, datetime
 
@@ -90,3 +91,21 @@ def link_status_from_result(darkweb_result):
 
     return final_result
 
+def clear_images_directory():
+    folder = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images')
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+def create_directory_for_images(link):
+    try:
+        url = urlparse(link)
+        os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', f'Onion_Link_{url.netloc}'))
+    except:
+        print("Folder already created!")

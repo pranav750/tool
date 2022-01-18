@@ -12,8 +12,10 @@ from threading import Lock
 from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
 from urllib.parse import urlparse, urljoin
+from PIL import Image
+from io import BytesIO
 
-from utils.functions import time_difference, create_wordcloud, links_from_result
+from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -68,18 +70,23 @@ class DarkWebCrawler:
             controller.authenticate(password = TORCC_HASH_PASSWORD)
             controller.signal(Signal.NEWNYM)
 
-    # Store images in the database 
-    # def store_images(self, image_links, current_link):
-    #     print("Images crawling")
-    #     for image_link in image_links:
-    #         try:
-    #             image_link_status, image_response = self.make_request(image_link)
-    #             image_object = DarkwebImage(link = current_link)
-    #             image_object.image.put(image_response.content, content_type = 'image/png')
-    #             image_object.save()
-    #         except:
-    #             pass
-    #     print("Images crawling done")
+    # Store images in the folder 
+    def store_images(self, image_links, current_link):
+        create_directory_for_images(current_link)
+        url = urlparse(current_link)
+        folder_name = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', f'Onion_Link_{url.netloc}')
+        i=0
+        print("Images crawling")
+        for image_link in image_links:
+            try:
+                image_link_status, image_response = self.make_request(image_link)
+                
+                with open(f"{folder_name}/images{i+1}.jpg", "wb+") as f:
+                    f.write(image_response.content)     
+            except:
+                pass
+            i+=1
+        print("Images crawling done")
 
     # Make a request to the dark web 
     def make_request(self, url):
@@ -121,6 +128,9 @@ class DarkWebCrawler:
         return random.choice(uastrings)
 
     def new_crawling(self):
+
+        clear_images_directory()
+
         start_time = datetime.now()
 
         depth = self.depth
@@ -153,25 +163,25 @@ class DarkWebCrawler:
                     soup = BeautifulSoup(link_response.text, 'lxml')
 
                     # Add images in database
-                    # image_links = []
+                    image_links = []
 
                     # Base url should be https://www.example.com
-                    # base_url = current_link
-                    # if (current_link[-1] == '/'):
-                    #     base_url = current_link[:len(current_link) - 1]
+                    base_url = current_link
+                    if (current_link[-1] == '/'):
+                        base_url = current_link[:len(current_link) - 1]
 
-                    # for image_tag in soup.find_all('img'):
-                    #     src_text = image_tag['src']
+                    for image_tag in soup.find_all('img'):
+                        src_text = image_tag['src']
 
-                    #     if len(src_text) >= 3 and src_text[0:3] == '../':
-                    #         continue
+                        if len(src_text) >= 3 and src_text[0:3] == '../':
+                            continue
 
-                    #     if src_text[0] == '/':
-                    #         image_links.append(base_url + src_text)
-                    #     else:
-                    #         image_links.append(base_url + '/' + src_text)                   
+                        if src_text[0] == '/':
+                            image_links.append(base_url + src_text)
+                        else:
+                            image_links.append(base_url + '/' + src_text)                   
 
-                    # # self.store_images(image_links,current_link)
+                    self.store_images(image_links,current_link)
 
                     # Create Link object to put in Database 
                     
@@ -239,6 +249,7 @@ class DarkWebCrawler:
             'crawled_links': self.crawled_links
         }
         return result
+
 
 
 class MultiThreaded():
