@@ -163,29 +163,16 @@ class DarkWebCrawler:
                     soup = BeautifulSoup(link_response.text, 'lxml')
 
                     # Add images in database
-                    image_links = []
+                    # image_links = []
 
-                    # Base url should be https://www.example.com
-                    # base_url = current_link
-                    # if (current_link[-1] == '/'):
-                    #     base_url = current_link[:len(current_link) - 1]
-
-                    for image_tag in soup.find_all('img'):
-                        src_text = image_tag['src']
-                        if not src_text.startswith('http'):
-                            image_links.append(urljoin(current_link,src_text))
-                        else:
-                            image_links.append(src_text)
-
-                    #     if len(src_text) >= 3 and src_text[0:3] == '../':
-                    #         continue
-
-                    #     if src_text[0] == '/':
-                    #         image_links.append(base_url + src_text)
+                    # for image_tag in soup.find_all('img', src=True):
+                    #     src_text = image_tag['src']
+                    #     if not src_text.startswith('http'):
+                    #         image_links.append(urljoin(current_link,src_text))
                     #     else:
-                    #         image_links.append(base_url + '/' + src_text)                   
+                    #         image_links.append(src_text)                  
 
-                    self.store_images(image_links,current_link)
+                    # self.store_images(image_links,current_link)
 
                     # Create Link object to put in Database 
                     
