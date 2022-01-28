@@ -3,10 +3,15 @@ import json
 from urllib.parse import urlparse
 import os, shutil
 import time
-from anytree import Node
+import pydot
+from graphviz import Source
+from graphviz import render
+from anytree import Node, RenderTree
 from anytree.dotexport import RenderTreeGraph
+from anytree.exporter import DotExporter
 from datetime import date, datetime
 import random
+
 
 from dotenv import dotenv_values
 
@@ -115,11 +120,19 @@ def link_tree_formation(crawled_links):
     root = None
     tree_dict = dict()
     for result in crawled_links:
-        node = Node(result['link'])
         if result['parent_link'] == '':
-            root = node
+            root = Node(result['link'])
+            tree_dict[result['link']] = root
+
         else:
-            node.parent = tree_dict[result['parent_link']]
-        tree_dict[result['link']] = node
+            node = Node(result['link'],parent = tree_dict[result['parent_link']])
+            tree_dict[result['link']] = node
+            
         
-    RenderTreeGraph(root).to_picture('link_tree.png')
+    wc_words = open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'link_tree.txt'), 'w', encoding = 'utf-8')
+
+    wc_words.flush()
+        
+    for pre, fill, node in RenderTree(root):
+        wc_words.write("%s%s" % (pre, node.name))
+        wc_words.write("\n")
