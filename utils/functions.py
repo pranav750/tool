@@ -3,15 +3,15 @@ import json
 from urllib.parse import urlparse
 import os, shutil
 import time
+from anytree import Node
+from anytree.exporter import DotExporter
 from datetime import date, datetime
 import random
 
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
-
 TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
-
 
 def time_difference(start_time, end_time):
     time_diff = end_time - start_time
@@ -109,3 +109,17 @@ def create_directory_for_images(number):
         os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(number)))
     except:
         print("Folder already created!")
+        
+def link_tree_formation(crawled_links):
+    print("Generating Link Tree...")
+    root = None
+    tree_dict = dict()
+    for result in crawled_links:
+        node = Node(result['link'])
+        if result['parent_link'] == '':
+            root = node
+        else:
+            node.parent = tree_dict[result['parent_link']]
+        tree_dict[result['link']] = node
+        
+    DotExporter(root).to_picture(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'link_tree.png'))

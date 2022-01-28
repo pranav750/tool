@@ -15,7 +15,7 @@ from urllib.parse import urlparse, urljoin
 from PIL import Image
 from io import BytesIO
 
-from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images
+from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images, link_tree_formation
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -244,6 +244,7 @@ class DarkWebCrawler:
         end_time = datetime.now()
 
         top_five_keywords = create_wordcloud(self.crawled_links)
+        link_tree_formation(self.crawled_links)
         result = {
             'link': self.base_url,
             'active_links': self.active_links,
