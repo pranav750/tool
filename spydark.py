@@ -5,7 +5,7 @@ import argparse
 from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
 
 # Importing functions from utils/functions.py
-from utils.functions import clear_images_directory, save_json, link_status_from_result, create_directory_for_images, open_tor_browser
+from utils.functions import clear_images_directory, save_json, save_csv, link_status_from_result, create_directory_for_images, open_tor_browser
 
 # Creating a parser object
 parser = argparse.ArgumentParser()
@@ -66,6 +66,9 @@ if args.dark:
         # Saving result into static/results.json
         save_json(result)
         
+        # Saving result into static/results.csv
+        save_csv(result)
+        
     # Multi threaded dark web crawling
     elif args.multi:
         
@@ -80,6 +83,9 @@ if args.dark:
 
         # Saving result into static/results.json
         save_json(result)
+        
+        # Saving result into static/results.csv
+        save_csv(result)
 
 elif args.surface:
     print(f'Crawl {args.url} with depth {args.depth}on surface web')

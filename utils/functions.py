@@ -6,6 +6,7 @@ from dotenv import dotenv_values
 import json
 import os, shutil
 import time
+import csv
 
 config = dotenv_values(".env")
 TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
@@ -24,6 +25,15 @@ def time_difference(start_time, end_time):
 def save_json(crawled_data):
     with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.json'), 'w') as results:
         json.dump(crawled_data, results)
+        
+def save_csv(crawled_data):
+    crawled_links = crawled_data['crawled_links']
+    fields = ['link', 'link_status', 'parent_link', 'title', 'text']
+    
+    with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.csv'), 'w') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames = fields)
+        writer.writeheader()
+        writer.writerows(crawled_links)
 
 def create_wordcloud(crawled_links):
     texts = texts_from_result(crawled_links)
