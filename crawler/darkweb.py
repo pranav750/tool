@@ -1,23 +1,34 @@
-import requests
-import random
-from lxml import html
+# Import for getting the time for crawling 
 import time
 from datetime import date, datetime
+
+# Import for random selection in array
+import random
+
+# Import for changing Tor IP address
 from stem import Signal
 from stem.control import Controller
-from bs4 import BeautifulSoup
+
+# Import for creating and opening folders and files
 import os
+
+# Import for crawling
 from queue import Queue, Empty
+from urllib.parse import urlparse, urljoin
+from bs4 import BeautifulSoup
+import requests
+from lxml import html
+
+# Imports for multithreading crawling
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
-from urllib.parse import urlparse, urljoin
-from PIL import Image
-from io import BytesIO
 
-from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images, link_tree_formation
+# Import from utils/functions.py
+from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images, link_tree_formation, open_tor_browser
+
+# Import .env variables
 from dotenv import dotenv_values
-
 config = dotenv_values(".env")
 
 # Add constants
@@ -50,6 +61,7 @@ class DarkWebCrawler:
         
         # visited links
         self.have_visited = set()
+        self.have_visited.add(self.base_url)
         
         # for database
         self.crawled_links = []
@@ -72,20 +84,27 @@ class DarkWebCrawler:
 
     # Store images in the folder 
     def store_images(self, image_links, current_link):
-        create_directory_for_images(self.active_links+self.inactive_links)
-        folder_name = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(self.active_links+self.inactive_links))
-        print(folder_name)
-        i=0
-        print("Images crawling")
+        
+        # Create a directory to store images for given link
+        create_directory_for_images(self.active_links + self.inactive_links)
+        
+        # Folder path of the above created directory
+        folder_name = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(self.active_links + self.inactive_links))
+
+        i = 0
+        print("Images crawling...")
+        
+        # Store the images in the created folder
         for image_link in image_links:
             try:
                 image_link_status, image_response = self.make_request(image_link)
                 if image_link_status:
-                    with open(f"{folder_name}/images{i+1}.{image_link.split('.')[-1]}", "wb+") as f:
+                    with open(f"{folder_name}/images{i+1}.jpg", "wb+") as f:
                         f.write(image_response.content)  
-                    i+=1
+                    i += 1
             except Exception as e:
                 print(str(e))
+                
         print("Images crawling done")
 
     # Make a request to the dark web 
@@ -126,11 +145,39 @@ class DarkWebCrawler:
                 ]
  
         return random.choice(uastrings)
+    
+    # Get all images from the soup object
+    def get_all_image_links(self, soup):
+        image_links = []
+        for image_tag in soup.find_all('img', src = True):
+            src_text = image_tag['src']
+            if not src_text.startswith('http'):
+                image_links.append(urljoin(current_link, src_text))
+            else:
+                image_links.append(src_text)
+                
+    # Get all links from the soup object           
+    def get_all_links(self, soup, current_link):
+        # Links added into queue from this soup object
+        links_added = 0
+        
+        for anchor_tag in soup.find_all('a', href = True):
+            link_in_anchor_tag = anchor_tag['href']
+            
+            if not link_in_anchor_tag.startswith('http'):
+                link_in_anchor_tag = urljoin(current_link, link_in_anchor_tag)
+
+            if link_in_anchor_tag not in self.have_visited:
+                self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
+                self.have_visited.add(link_in_anchor_tag)
+                links_added += 1
 
     def new_crawling(self):
 
+        # Clear the images directory to store new images
         clear_images_directory()
 
+        # Start time of the crawling
         start_time = datetime.now()
 
         depth = self.depth
@@ -152,7 +199,6 @@ class DarkWebCrawler:
                 current_link = current_link_object['url']
                 parent_link = current_link_object['parent_link']
 
-
                 # Make request to the current link 
                 link_active, link_response = self.make_request(current_link)
 
@@ -163,16 +209,12 @@ class DarkWebCrawler:
                     soup = BeautifulSoup(link_response.text, 'lxml')
 
                     # Add images in database
-                    # image_links = []
+                    # image_links = self.get_all_image_links(soup)           
 
-                    # for image_tag in soup.find_all('img', src=True):
-                    #     src_text = image_tag['src']
-                    #     if not src_text.startswith('http'):
-                    #         image_links.append(urljoin(current_link,src_text))
-                    #     else:
-                    #         image_links.append(src_text)                  
-
-                    # self.store_images(image_links,current_link)
+                    # if len(image_links) > 0:
+                    #     self.store_images(image_links, current_link)
+                    # else:
+                    #     print("No Images Found...")
 
                     # Create Link object to put in Database 
                     
@@ -190,28 +232,8 @@ class DarkWebCrawler:
                     except:
                         database_link_object['text'] = ''
 
-                    links_added = 0
-                    for anchor_tag in soup.find_all('a', href=True):
-                        link_in_anchor_tag = anchor_tag['href']
-                        
-
-                        if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited and links_added < 100 and link_in_anchor_tag != self.base_url:
-                            if link_in_anchor_tag.startswith('http'):
-                                self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
-                                links_added += 1
-                                self.have_visited.add(link_in_anchor_tag)
-                            else:
-                                if link_in_anchor_tag[0]=='/':
-                                    link_in_anchor_tag = link_in_anchor_tag[1:]
-                                    
-                                link = self.base_url + '/' + link_in_anchor_tag
-                                if link not in self.have_visited:
-                                    self.queue.put({ 'url': link, 'parent_link': current_link }) 
-                                    links_added += 1
-                                    self.have_visited.add(link)
-
-                                                
-
+                    self.get_all_links(soup, current_link)
+                    
                 else:
 
                     self.inactive_links += 1
@@ -220,7 +242,7 @@ class DarkWebCrawler:
                     database_link_object['title'] = ''
                     database_link_object['link_status'] = link_active
                     database_link_object['link'] = current_link
-                    database_link_object['parent_link'] = ''
+                    database_link_object['parent_link'] = parent_link
                     database_link_object['text'] = ''
 
                 self.crawled_links.append(database_link_object)
@@ -228,10 +250,16 @@ class DarkWebCrawler:
 
             depth -= 1
 
+        # End time of crawling
         end_time = datetime.now()
 
+        # Create word cloud
         top_five_keywords = create_wordcloud(self.crawled_links)
+        
+        # Create link tree
         link_tree_formation(self.crawled_links)
+        
+        #Create final result
         result = {
             'link': self.base_url,
             'active_links': self.active_links,
@@ -240,95 +268,122 @@ class DarkWebCrawler:
             'time_taken': time_difference(start_time, end_time),
             'crawled_links': self.crawled_links
         }
+        
         return result
 
 
 
 class MultiThreaded():
-    def __init__(self, base_url,depth):
+    def __init__(self, base_url, depth):
+        
+        # socks proxies required for TOR usage
+        self.proxies = {
+            'http' : 'socks5h://127.0.0.1:9150', 
+            'https' : 'socks5h://127.0.0.1:9150'
+        }
+        
+        # base url
         self.base_url = base_url
-        self.root_url = '{}://{}'.format(urlparse(self.base_url).scheme, urlparse(self.base_url).netloc)
-        self.links_to_crawl = Queue()
-        self.links_to_crawl.put((self.base_url, depth))
+        if self.base_url[-1] == '/':
+            self.base_url = self.base_url[:len(self.base_url) - 1]
+        
+        #depth
+        self.depth = depth
+        
+        # global queue
+        self.queue = Queue()
+        self.queue.put({ 'url': self.base_url, 'parent_link': '', 'depth': self.depth })
+        
+        # visited links
         self.have_visited = set()
-        self.error_links = set()
-        self.pool = ThreadPoolExecutor(max_workers=20)
-        self.proxies = {'http' : 'socks5h://127.0.0.1:9150', 'https' : 'socks5h://127.0.0.1:9150'}
+        
+        # for database
         self.crawled_links = []
+        self.active_links = 0
+        self.inactive_links = 0
         
+        # Thread pool
+        self.pool = ThreadPoolExecutor(max_workers = 20)
         
+    # After each request, change the tor IP address
     def renew_tor_ip(self):
         with Controller.from_port(port = 9051) as controller:
-            controller.authenticate(password=TORCC_HASH_PASSWORD)
+            controller.authenticate(password = TORCC_HASH_PASSWORD)
             controller.signal(Signal.NEWNYM)
 
+    # Get the current IP address to check whether the IP address of tor changed or not.
     def get_current_ip(self):
         try:
-            r = requests.get('http://httpbin.org/ip', proxies = self.proxies)
+            response = requests.get('http://httpbin.org/ip', proxies = self.proxies)
+            return response.text.split(",")[-1].split('"')[3]
         except Exception as e:
-            print (str(e))
-        else:
-            return r.text.split(",")[-1].split('"')[3]
+            return str(e)
+        
+    # Get all links from the soup object           
+    def get_all_links(self, soup, current_link, depth):
+        # Links added into queue from this soup object
+        links_added = 0
+        
+        for anchor_tag in soup.find_all('a', href = True):
+            link_in_anchor_tag = anchor_tag['href']
+            
+            if not link_in_anchor_tag.startswith('http'):
+                link_in_anchor_tag = urljoin(current_link, link_in_anchor_tag)
 
-    def parse_links(self, html, depth, current_link):
+            if link_in_anchor_tag not in self.have_visited:
+                self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link, 'depth': depth - 1 }) 
+                self.have_visited.add(link_in_anchor_tag)
+                links_added += 1
+        
+    # Scrape the data and the links from the html page
+    def get_data(self, html, depth, current_link, parent_link):
 
-        soup = BeautifulSoup(html, 'html.parser')
+        # Creating soup object
+        soup = BeautifulSoup(html, 'lxml')
 
-        links = soup.find_all('a', href=True)
-
-        for anchor_tag in links:
-            try:
-                link_in_anchor_tag = anchor_tag['href']
-
-                if link_in_anchor_tag != '' and link_in_anchor_tag != '/' and link_in_anchor_tag not in self.have_visited:
-                    if link_in_anchor_tag.startswith('http'):
-                        self.links_to_crawl.put((link_in_anchor_tag, depth - 1))
-                    elif link_in_anchor_tag.startswith('/'):
-                        base_url = current_link
-
-                        if base_url[-1] == '/':
-                            base_url = current_link[:len(current_link)-1]
-
-                        if link_in_anchor_tag[0] == '/':
-                            link_in_anchor_tag = link_in_anchor_tag[1:]
-
-                        self.links_to_crawl.put((base_url + '/' + link_in_anchor_tag, depth - 1))
-                    
-                    elif not link_in_anchor_tag.startswith('.'):
-                        base_url = current_link
-
-                        if base_url[-1] == '/':
-                            base_url = current_link[:len(current_link)-1]
-
-                        self.links_to_crawl.put((base_url + '/' + link_in_anchor_tag, depth - 1))
-
-            except:
-                pass
-
-        # for link in links:
-        #     url = link['href']
-        #     if url.startswith('/') or url.startswith(self.root_url):
-        #         url = urljoin(self.root_url, url)
-        #         if url not in self.have_visited:
-        #             self.links_to_crawl.put((url, depth-1))
-        #     elif url.startswith('http'):
-        #         if url not in self.have_visited:
-        #             self.links_to_crawl.put((url, depth-1))
-
+        # Scrape info from the current link
+        self.scrape_info(True, soup, current_link, parent_link)
+        
+        # Put all links from soup object into queue
+        self.get_all_links(soup, current_link, depth)
  
-    def scrape_info(self, html, current_link):
-        soup = BeautifulSoup(html, 'html.parser')
-        title = soup.find('title').get_text()
-        text = soup.get_text()
-        links = [link['href'] for link in soup.find_all('a', href = True)]
-        link = current_link
-        self.crawled_links.append({
-            'title': title,
-            'text': text,
-            'links': links,
-            'link': link,
-        })
+    # Scrape info from the current link and put into database
+    def scrape_info(self, is_active, soup, current_link, parent_link):
+        
+        # We will create a Link object and push it in crawled_links
+        database_link_object = dict()
+        
+        if is_active:
+            
+            self.active_links += 1
+            
+            try:
+                database_link_object['title'] = soup.find('title').get_text()
+            except:
+                database_link_object['title'] = ''
+                
+            database_link_object['link_status'] = True
+            database_link_object['link'] = current_link
+            database_link_object['parent_link'] = parent_link
+            
+            try:
+                database_link_object['text'] = soup.get_text(" ")
+            except:
+                database_link_object['text'] = ''
+            
+        else:
+            self.inactive_links += 1
 
+            # Create not found object to put in Database
+            database_link_object['title'] = ''
+            database_link_object['link_status'] = link_active
+            database_link_object['link'] = current_link
+            database_link_object['parent_link'] = parent_link
+            database_link_object['text'] = ''
+            
+        self.crawled_links.append(database_link_object)
+
+    # Random User Agent
     def GET_UA(self):
         uastrings = ["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
                 "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.72 Safari/537.36",
@@ -344,57 +399,115 @@ class MultiThreaded():
  
         return random.choice(uastrings)
  
+    # Callback funtion after the job is done
     def post_scrape_callback(self, res):
-        result_from_callback = res.result()
-        result = result_from_callback[0]
-        depth = result_from_callback[1]
-        current_link = result_from_callback[2]
         
+        # Result
+        result_from_callback = res.result()
+        
+        # Extracting parameters from result
+        result = result_from_callback['result']
+        depth = result_from_callback['depth']
+        current_link = result_from_callback['current_link']
+        parent_link = result_from_callback['parent_link']
+        
+        # If result is not none that means we made the request successfully
         if result != None:
             print('Found Current Link ' + current_link)
-            self.parse_links(result.text, depth, current_link)
-            self.scrape_info(result.text, current_link)
+            
+            # Scrape the data and the links from the html page
+            self.get_data(result, depth, current_link, parent_link)
+            
         else:
             print('Not Found Current Link ' + current_link)
+            
+            # Create a not found object and put it in database
+            self.scrape_info(False, None, current_link, parent_link)
 
- 
-    def scrape_page(self, url, headers, depth):
+    # Scrape the url and return the result
+    def scrape_page(self, current_link, parent_link, headers, depth):
         try:
-            self.renew_tor_ip()
-            res = requests.get(url, proxies = self.proxies, headers = headers)           
-            return (res, depth, url)
+            # Make request to the url
+            res = requests.get(current_link, proxies = self.proxies, headers = headers)
+                 
+            # If request successful, return this dictionary as result to the callback funtion      
+            return { 
+                'result': res.text, 
+                'current_link': current_link, 
+                'parent_link': parent_link, 
+                'depth': depth 
+            }
         except:
-            return (None, depth, url)
+            
+            # If request is not successful, return this dictionary as result to the callback funtion 
+            return { 
+                'result': None, 
+                'current_link': current_link, 
+                'parent_link': parent_link, 
+                'depth': depth 
+            }
         
     def run_scraper(self):
 
-        os.startfile(TOR_BROWSER_PATH)
-        time.sleep(10)
-        print("Tor Browser started")
-
+        # Start time of the crawling
         start_time = datetime.now()
 
         while True:
             try:
-                link_info = self.links_to_crawl.get(timeout = 20)
-                target_link = link_info[0]
-                depth = link_info[1]
                 
-                if depth > 0 and target_link not in self.have_visited:
-                    self.have_visited.add(target_link)
+                # First link from queue
+                link_info = self.queue.get(timeout = 20)
+                current_link = link_info['url']
+                parent_link = link_info['parent_link']
+                depth = link_info['depth']
+                
+                if depth > 0 and current_link not in self.have_visited:
+                    
+                    # Add the link into visited
+                    self.have_visited.add(current_link)
+                    
+                    # Renew Tor IP before making request
                     self.renew_tor_ip()
+                    
+                    # Create header for requesting to url
                     headers = {'User-Agent': self.GET_UA()}
-                    print("Scraping URL: {} with User-Agent {} with depth {}".format(target_link, headers['User-Agent'], depth))
-                    job = self.pool.submit(self.scrape_page, target_link, headers, depth)
+                    print("Scraping URL: {} with User-Agent {} with depth {}".format(current_link, headers['User-Agent'], depth))
+                    
+                    # Submit the request to the given link in the pool
+                    job = self.pool.submit(self.scrape_page, current_link, parent_link, headers, depth)
+                    
+                    # After the job is done, make this callback function
                     job.add_done_callback(self.post_scrape_callback)
+                    
             except Empty:
                 break
             except Exception as e:
                 print(e)
                 continue
         
+        # End time of crawling
         end_time = datetime.now()
-        return time_difference(start_time, end_time), self.crawled_links
+        
+        # Create word cloud
+        top_five_keywords = create_wordcloud(self.crawled_links)
+        
+        # Create link tree
+        link_tree_formation(self.crawled_links)
+        
+        #Create final result
+        result = {
+            'link': self.base_url,
+            'active_links': self.active_links,
+            'inactive_links': self.inactive_links,
+            'top_five_keywords': top_five_keywords,
+            'time_taken': time_difference(start_time, end_time),
+            'crawled_links': self.crawled_links
+        }
+        
+        return result
+
+
+
 
 def link_similarity(links,depth):
 

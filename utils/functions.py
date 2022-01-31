@@ -1,22 +1,20 @@
 from wordcloud import WordCloud, STOPWORDS
-import json
 from urllib.parse import urlparse
+from anytree import Node, RenderTree
+from dotenv import dotenv_values
+
+import json
 import os, shutil
 import time
-import pydot
-from graphviz import Source
-from graphviz import render
-from anytree import Node, RenderTree
-from anytree.dotexport import RenderTreeGraph
-from anytree.exporter import DotExporter
-from datetime import date, datetime
-import random
-
-
-from dotenv import dotenv_values
 
 config = dotenv_values(".env")
 TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
+
+def open_tor_browser():
+    # Start Tor Browser
+    os.startfile(TOR_BROWSER_PATH)
+    time.sleep(10)
+    print("Tor Browser started")
 
 def time_difference(start_time, end_time):
     time_diff = end_time - start_time
@@ -38,7 +36,6 @@ def create_wordcloud(crawled_links):
         
     top_five_keywords = display_wordcloud(wc_words)
     return top_five_keywords
-
 
 def display_wordcloud(wc_words):
     print("Generating Wordcloud...")
@@ -129,10 +126,9 @@ def link_tree_formation(crawled_links):
             tree_dict[result['link']] = node
             
         
-    wc_words = open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'link_tree.txt'), 'w', encoding = 'utf-8')
-
-    wc_words.flush()
+    link_tree = open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'link_tree.txt'), 'w', encoding = 'utf-8')
+    link_tree.flush()
         
     for pre, fill, node in RenderTree(root):
-        wc_words.write("%s%s" % (pre, node.name))
-        wc_words.write("\n")
+        link_tree.write("%s%s" % (pre, node.name))
+        link_tree.write("\n")
