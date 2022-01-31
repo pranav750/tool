@@ -163,6 +163,9 @@ class DarkWebCrawler:
         
         for anchor_tag in soup.find_all('a', href = True):
             link_in_anchor_tag = anchor_tag['href']
+
+            if link_in_anchor_tag == '/' or link_in_anchor_tag.startswith('/index') or link_in_anchor_tag == 'index':
+                continue
             
             if not link_in_anchor_tag.startswith('http'):
                 link_in_anchor_tag = urljoin(current_link, link_in_anchor_tag)
@@ -296,6 +299,8 @@ class MultiThreaded():
         
         # visited links
         self.have_visited = set()
+        self.have_visited.add(self.base_url)
+
         
         # for database
         self.crawled_links = []
@@ -326,6 +331,9 @@ class MultiThreaded():
         
         for anchor_tag in soup.find_all('a', href = True):
             link_in_anchor_tag = anchor_tag['href']
+
+            if link_in_anchor_tag == '/' or link_in_anchor_tag.startswith('/index') or link_in_anchor_tag == 'index':
+                continue
             
             if not link_in_anchor_tag.startswith('http'):
                 link_in_anchor_tag = urljoin(current_link, link_in_anchor_tag)
@@ -376,7 +384,7 @@ class MultiThreaded():
 
             # Create not found object to put in Database
             database_link_object['title'] = ''
-            database_link_object['link_status'] = link_active
+            database_link_object['link_status'] = False
             database_link_object['link'] = current_link
             database_link_object['parent_link'] = parent_link
             database_link_object['text'] = ''
@@ -461,11 +469,8 @@ class MultiThreaded():
                 parent_link = link_info['parent_link']
                 depth = link_info['depth']
                 
-                if depth > 0 and current_link not in self.have_visited:
-                    
-                    # Add the link into visited
-                    self.have_visited.add(current_link)
-                    
+                if depth > 0:
+                                        
                     # Renew Tor IP before making request
                     self.renew_tor_ip()
                     
