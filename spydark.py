@@ -3,6 +3,7 @@ import argparse
 
 # Importing Dark Web crawling objects from crawler/darkweb.py
 from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
+from crawler.surfaceweb import SurfaceWebCrawler
 
 # Importing functions from utils/functions.py
 from utils.functions import clear_images_directory, save_json, save_csv, link_status_from_result, create_directory_for_images, open_tor_browser
@@ -30,7 +31,7 @@ parser.add_argument('--depth', type = int, default = 1, help = 'Specify the dept
 
 parser.add_argument('--lsm', action = "store_true", help='Specify the dark web link')
 
-parser.add_argument('--links', nargs='+', help='Specify the dark web link')
+parser.add_argument('--links', nargs='+', help='Specify the dark web links for link similarity')
 
 parser.add_argument('--lst', action = "store_true", help='Specify the dark web link')
 
@@ -88,7 +89,29 @@ if args.dark:
         save_csv(result)
 
 elif args.surface:
-    print(f'Crawl {args.url} with depth {args.depth}on surface web')
+    print(f'Crawl {args.url} with depth {args.depth} on surface web')
+
+    # Clear the images directory for storing new images 
+    clear_images_directory()
+
+    # Creating link out of keyword or url provided
+    link = ''
+    if args.url:
+        link = args.url
+    elif args.keyword:
+        link = 'wiki_link/' + args.keyword
+        
+    # Surface web object creation
+    surface_web_object = SurfaceWebCrawler(args.url, args.depth)
+    
+    # Crawling
+    result = surface_web_object.new_crawling()
+        
+    # Saving result into static/results.json
+    save_json(result)
+        
+    # Saving result into static/results.csv
+    save_csv(result)
 
 elif args.lsm:
     print (f'Link Similarity checking with depth 2')
