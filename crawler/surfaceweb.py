@@ -71,7 +71,7 @@ class SurfaceWebCrawler:
     def make_request(self, url):
         try:
             # Request to the Surface Web URL 
-            response = requests.get(url, timeout = (3, 20))
+            response = requests.get(url)
 
             # Print that the link is found and return the response and that link is active
             print("Page found.... " + url)     

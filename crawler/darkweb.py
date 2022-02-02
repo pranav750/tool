@@ -436,7 +436,7 @@ class MultiThreaded():
     def scrape_page(self, current_link, parent_link, headers, depth):
         try:
             # Make request to the url
-            res = requests.get(current_link, proxies = self.proxies, headers = headers, timeout = (3, 20))
+            res = requests.get(current_link, proxies = self.proxies, headers = headers, timeout = 40)
                  
             # If request successful, return this dictionary as result to the callback funtion      
             return { 
@@ -464,7 +464,7 @@ class MultiThreaded():
             try:
                 
                 # First link from queue
-                link_info = self.queue.get(timeout = 40)
+                link_info = self.queue.get(timeout = 60)
                 current_link = link_info['url']
                 parent_link = link_info['parent_link']
                 depth = link_info['depth']
