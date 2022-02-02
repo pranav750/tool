@@ -1,6 +1,6 @@
 # Import for getting the time for crawling 
 import time
-from datetime import date, datetime
+from datetime import datetime
 
 # Import for random selection in array
 import random
@@ -83,7 +83,7 @@ class DarkWebCrawler:
             controller.signal(Signal.NEWNYM)
 
     # Store images in the folder 
-    def store_images(self, image_links, current_link):
+    def store_images(self, image_links):
         
         # Create a directory to store images for given link
         create_directory_for_images(self.active_links + self.inactive_links)
@@ -147,7 +147,7 @@ class DarkWebCrawler:
         return random.choice(uastrings)
     
     # Get all images from the soup object
-    def get_all_image_links(self, soup):
+    def get_all_image_links(self, soup, current_link):
         image_links = []
         for image_tag in soup.find_all('img', src = True):
             src_text = image_tag['src']
@@ -155,6 +155,7 @@ class DarkWebCrawler:
                 image_links.append(urljoin(current_link, src_text))
             else:
                 image_links.append(src_text)
+        return image_links
                 
     # Get all links from the soup object           
     def get_all_links(self, soup, current_link):
@@ -212,10 +213,10 @@ class DarkWebCrawler:
                     soup = BeautifulSoup(link_response.text, 'lxml')
 
                     # Add images in database
-                    # image_links = self.get_all_image_links(soup)           
+                    # image_links = self.get_all_image_links(soup, current_link)           
 
                     # if len(image_links) > 0:
-                    #     self.store_images(image_links, current_link)
+                    #     self.store_images(image_links)
                     # else:
                     #     print("No Images Found...")
 
@@ -301,7 +302,6 @@ class MultiThreaded():
         self.have_visited = set()
         self.have_visited.add(self.base_url)
 
-        
         # for database
         self.crawled_links = []
         self.active_links = 0
@@ -436,7 +436,7 @@ class MultiThreaded():
     def scrape_page(self, current_link, parent_link, headers, depth):
         try:
             # Make request to the url
-            res = requests.get(current_link, proxies = self.proxies, headers = headers)
+            res = requests.get(current_link, proxies = self.proxies, headers = headers, timeout = (3, 20))
                  
             # If request successful, return this dictionary as result to the callback funtion      
             return { 
@@ -464,7 +464,7 @@ class MultiThreaded():
             try:
                 
                 # First link from queue
-                link_info = self.queue.get(timeout = 20)
+                link_info = self.queue.get(timeout = 40)
                 current_link = link_info['url']
                 parent_link = link_info['parent_link']
                 depth = link_info['depth']
