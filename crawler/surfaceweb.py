@@ -14,15 +14,26 @@ from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 import requests
 from lxml import html
+import re
 
 # Import for google crawl
 from googlesearch import search
 
 # Import from selenium web driver
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
 
 # Import from utils/functions.py
-from utils.functions import time_difference, create_wordcloud, clear_images_directory, create_directory_for_images, link_tree_formation
+from utils.functions import time_difference, create_wordcloud, create_directory_for_images, link_tree_formation
+
+# Import .env variables
+from dotenv import dotenv_values
+config = dotenv_values(".env")
+
+# Add constants
+INSTAGRAM_USERNAME = config['INSTAGRAM_USERNAME']
+INSTAGRAM_PASSWORD = config['INSTAGRAM_PASSWORD']
 
 # Chromedriver path
 CHROMEDRIVER_PATH = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'chromedriver', 'chromedriver.exe')
@@ -121,9 +132,6 @@ class SurfaceWebCrawler:
                 links_added += 1
                 
     def new_crawling(self):
-
-        # Clear the images directory to store new images
-        clear_images_directory()
 
         # Start time of the crawling
         start_time = datetime.now()
@@ -251,6 +259,7 @@ class GoogleCrawler:
         for link in links_found_on_google:
             if link not in self.have_visited:
                 self.queue.put({ 'url': link, 'parent_link': self.base_url })
+                self.have_visited.add(link)
                 
     # Make a request to the dark web 
     def make_request(self, url):
@@ -267,9 +276,6 @@ class GoogleCrawler:
             return False, None
 
     def new_crawling(self):
-        
-        # Clear the images directory to store new images
-        clear_images_directory()
 
         # Start time of the crawling
         start_time = datetime.now()
@@ -365,174 +371,288 @@ class GoogleCrawler:
         
         return result
 
-
-# class Instagram:
-
-#     def __init__(self, keyword, depth):
-#         self.keyword = keyword
-#         self.depth = depth
-#         self.visitedcoll = connect_mongodb("instagramdb", "keywords-visited")
-#         self.coll = connect_mongodb("instagramdb", self.keyword)
-
-#     def instacrawl(self):
-
-#         visited = False
-#         for _ in self.visitedcoll.find({"keyword":self.keyword}):
-#             visited = True
+# Instagram Crawler class
+class InstagramCrawler:
+    
+    def __init__(self, keyword, depth):
         
-#         links = []
-#         wc_words = open('crawler/static/crawler/wc_words.txt', 'w', encoding='utf-8')
-
-#         if visited:
-#             for x in self.coll.find():
-#                 links.append(x["Link"])
-#                 for hashtag in x["Hashtags"]:
-#                     wc_words.write(hashtag + "\n")
-
-#         else:
-#             driver = webdriver.Chrome(CHROMEDRIVER_PATH)
-
-#             # TODO: Can try headless webdriver ->
-#             # chrome_options = Options()
-#             # chrome_options.add_argument("--headless")
-#             # driver = webdriver.Chrome(CHROMEDRIVER_PATH, chrome_options=chrome_options)
-            
-#             driver.get("https://www.instagram.com/")
-#             time.sleep(5)
-#             input_fields = driver.find_elements_by_xpath("//input")
-#             count = 0
-#             for input_field in input_fields:
-#                 name = input_field.get_attribute("name")
-#                 if name == 'username':
-#                     input_field.send_keys(INSTAGRAM_USERNAME)
-#                     count += 1
-#                 elif name == 'password':
-#                     input_field.send_keys(INSTAGRAM_PASSWORD)
-#                     count += 1
-#                 if count == 2:
-#                     break
-#             submit_btn = driver.find_element_by_xpath("//button[@type='submit']")
-#             submit_btn.send_keys(Keys.ENTER)
-#             time.sleep(5)
-
-#             url = "https://www.instagram.com/explore/tags/" + self.keyword + "/"
-#             driver.get(url)
-#             for _ in range(self.depth):
-#                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-#                 time.sleep(2)
-#                 link_elements = driver.find_elements_by_xpath("//*[@class='v1Nh3 kIKUG  _bz0w']/a")
-#                 for link in link_elements:
-#                     try:
-#                         href = link.get_attribute('href')
-#                         if href not in links:
-#                             links.append(href)
-#                     except Exception:
-#                         pass
-            
-            
-#             for link in links:
-#                 post_hashtags = []
-#                 try:
-#                     driver.get(link)
-#                     account = driver.find_elements_by_xpath("//*[@id='react-root']/section/main/div/div[1]/article/div[3]/div[1]/ul/div/li/div/div/div[2]/h2/div/span/a")[0].get_attribute('href')
-#                     caption = driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div[1]/article/div[3]/div[1]/ul/div/li/div/div/div[2]/span").text.split("#")[0]
-#                     imgs = list(set([str(driver.find_element_by_class_name("FFVAD").get_attribute('src'))]))
-#                     images = []
-#                     for img in imgs:
-#                         images.append([img, False])
-#                     store_images_in_db("instagramdb", images)
-#                     try:
-#                         location = driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div[1]/article/header/div[2]/div[2]/div[2]/a").text
-#                     except Exception:
-#                         location = None
-#                     hashtags_found = driver.find_elements_by_class_name("xil3i")
-#                     for hashtag_found in hashtags_found:
-#                         post_hashtags.append(hashtag_found.text)
-#                         wc_words.write(hashtag_found.text + "\n")
-#                 except Exception:
-#                     print("Parsing failed: ", link)
-#                     continue
-#                 self.coll.insert_one({"Link":link, "Posted by":account, "Location":location, "Images":images, "Caption":caption, "Hashtags":post_hashtags})
-#             driver.quit()
-#             self.visitedcoll.insert_one({"keyword":self.keyword})
-
-#         topFiveWords = display_wordcloud(wc_words)
-
-#         return links, topFiveWords
-
-
-# class Twitter:
-#     def __init__(self, keyword, depth):
-#         self.keyword = keyword
-#         self.depth = depth
-#         self.visitedcoll = connect_mongodb("twitterdb", "keywords-visited")
-#         self.coll = connect_mongodb("twitterdb", self.keyword)
-
-#     def twittercrawl(self):
-
-#         visited = False
-#         for _ in self.visitedcoll.find({"keyword":self.keyword}):
-#             visited = True
-
-#         links = []
-#         wc_words = open('crawler/static/crawler/wc_words.txt', 'w', encoding='utf-8')
-
-#         if visited:
-#             for x in self.coll.find():
-#                 links.append(x["Link"])
-#                 for hashtag in x["Hashtags"]:
-#                     wc_words.write(hashtag + "\n")
+        # base keyword
+        self.keyword = keyword
         
-#         else:
+        # depth
+        self.depth = depth
+        
+        # global queue
+        self.queue = Queue()
+        
+        # visited links
+        self.have_visited = set()
+        
+        # for database
+        self.crawled_links = []
+        
+        # Chrome webdriver
+        self.driver = webdriver.Chrome(CHROMEDRIVER_PATH)
+        
+    # Login into instagram
+    def login(self):
+        
+        # Go to instagram.com
+        self.driver.get("https://www.instagram.com/")
+        time.sleep(5)
+        
+        # Get the input fields
+        input_fields = self.driver.find_elements_by_xpath("//input")
+        count = 0
+        
+        # Put data into input field
+        for input_field in input_fields:
+            name = input_field.get_attribute("name")
+            if name == 'username':
+                input_field.send_keys(INSTAGRAM_USERNAME)
+                count += 1
+            elif name == 'password':
+                input_field.send_keys(INSTAGRAM_PASSWORD)
+                count += 1
+            if count == 2:
+                break
             
-#             driver = webdriver.Chrome(CHROMEDRIVER_PATH)
+        # Press submit
+        submit_btn = self.driver.find_element_by_xpath("//button[@type='submit']")
+        submit_btn.send_keys(Keys.ENTER)
+        time.sleep(5)
+        
+    # Get all links           
+    def get_all_links(self):
+        
+        # Search for keyword in instagram
+        url = "https://www.instagram.com/explore/tags/" + self.keyword + "/"
+        
+        self.driver.get(url)
+            
+        for _ in range(self.depth):
+            
+            # Roll down to the screen
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            
+            # Get all the link elements
+            link_elements = self.driver.find_elements_by_xpath("//*[@class='v1Nh3 kIKUG  _bz0w']/a")
+            
+            # Get all the hrefs and put them in the queue
+            for link in link_elements:
+                try:
+                    href = link.get_attribute('href')
+                    if href not in self.have_visited:
+                        self.queue.put(href)
+                        self.have_visited.add(href)
+                except Exception:
+                    pass
 
-#             # TODO: Can try headless webdriver ->
-#             # chrome_options = Options()
-#             # chrome_options.add_argument("--headless")
-#             # driver = webdriver.Chrome(CHROMEDRIVER_PATH, chrome_options=chrome_options)
+    def new_crawling(self):
+            
+        # Login into instagram
+        self.login()
 
-#             url = "https://twitter.com/search?q=%23" + self.keyword + "&src=typed_query"
-#             driver.get(url)
-#             for _ in range(self.depth):
-#                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-#                 time.sleep(3)
-#                 anchor_tags = driver.find_elements_by_tag_name('a')
-#                 for anchor_tag in anchor_tags:
-#                     href = anchor_tag.get_attribute("href")
-#                     if ("/status/" in href) and ("/photo/" not in href) and (href not in links):
-#                         links.append(href)
+        # Start time of the crawling
+        start_time = datetime.now()
+        
+        # Get all links
+        self.get_all_links()
+        
+        while not self.queue.empty():
 
-#             for link in links:
-#                 post_hashtags = []
-#                 imgs = [] 
-#                 try:
-#                     driver.get(link)
-#                     time.sleep(3)
-#                     account = link.split("/status/")[0]
-#                     img_elements = driver.find_elements_by_tag_name("img")
-#                     for image in img_elements:
-#                         if image.get_attribute("alt") == "Image":
-#                             imgs.append(str(image.get_attribute("src")))
-#                     caption_element = driver.find_element_by_xpath("//*[@id='react-root']/div/div/div[2]/main/div/div/div/div/div/div[2]/div/section/div/div/div[1]/div/div/article/div/div/div/div[3]/div[1]/div/div")
-#                     caption = caption_element.text
-#                     for span in caption_element.find_elements_by_xpath("./span"):
-#                         hashtag = re.findall("#[a-zA-Z0-9]+", span.text)
-#                         if len(hashtag) == 1:
-#                             post_hashtags.append(hashtag[0])
-#                             wc_words.write(hashtag[0] + "\n")
-#                     imgs = list(set(imgs))
-#                     images = []
-#                     for img in imgs:
-#                         images.append([img, False])
-#                     store_images_in_db("twitterdb", images)
-#                 except Exception:
-#                     print("Parsing failed: ", link)
-#                     continue
-#                 self.coll.insert_one({"Link":link, "Posted by":account, "Images": images, "Caption":caption, "Hashtags":post_hashtags})
-#             driver.quit()
-#             self.visitedcoll.insert_one({"keyword":self.keyword})
+            print('--------------')
 
-#         topFiveWords = display_wordcloud(wc_words)
+            # Darkweb database model has a list of crawled links
+            # We will create a Link object and push it in crawled_links
+            database_link_object = dict()
 
-#         return links, topFiveWords
+            # Current link in queue
+            current_link = self.queue.get()
+            
+            try:
+
+                # Make request to the current link 
+                self.driver.get(current_link)
+                print('Link found ', current_link)
+
+                # Add images in database
+
+
+                # Create Link object to put in Database 
+                    
+                database_link_object['link'] = current_link
+                
+                try:
+                    database_link_object['posted_by'] = self.driver.find_elements_by_xpath("//*[@id='react-root']/section/main/div/div[1]/article/div[3]/div[1]/ul/div/li/div/div/div[2]/h2/div/span/a")[0].get_attribute('href')
+                except:
+                    database_link_object['posted_by'] = ''
+                            
+                try:
+                    database_link_object['location'] = self.driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div[1]/article/header/div[2]/div[2]/div[2]/a").text
+                except:
+                    database_link_object['location'] = ''
+                    
+                try:
+                    database_link_object['caption'] = self.driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div[1]/article/div[3]/div[1]/ul/div/li/div/div/div[2]/span").text.split("#")[0]
+                except:
+                    database_link_object['caption'] = ''
+                        
+                try:
+                    database_link_object['hashtags'] = []
+                    hashtags_found = self.driver.find_elements_by_class_name("xil3i")
+                    for hashtag_found in hashtags_found:
+                        database_link_object['hashtags'].append(hashtag_found.text)
+                except:
+                    database_link_object['hashtags'] = []
+            
+            except:
+                
+                database_link_object['link'] = current_link
+                database_link_object['posted_by'] = ''
+                database_link_object['location'] = ''
+                database_link_object['caption'] = ''
+                database_link_object['hashtags'] = []
+
+            self.crawled_links.append(database_link_object)
+            print('--------------')
+            
+        # Quit the selenium webdriver
+        self.driver.quit()
+
+        # End time of crawling
+        end_time = datetime.now()
+        
+        #Create final result
+        result = {
+            'keyword': self.keyword,
+            'time_taken': time_difference(start_time, end_time),
+            'crawled_links': self.crawled_links
+        }
+        
+        return result
+
+# Twitter Crawler class
+class TwitterCrawler:
+    
+    def __init__(self, keyword, depth):
+        
+        # base keyword
+        self.keyword = keyword
+        
+        # depth
+        self.depth = depth
+        
+        # global queue
+        self.queue = Queue()
+        
+        # visited links
+        self.have_visited = set()
+        
+        # for database
+        self.crawled_links = []
+        
+        # Chrome webdriver
+        self.driver = webdriver.Chrome(CHROMEDRIVER_PATH)
+        
+    # Get all links           
+    def get_all_links(self):
+        
+        # Search for keyword in instagram
+        url = "https://twitter.com/search?q=%23" + self.keyword + "&src=typed_query"
+        
+        self.driver.get(url)
+            
+        for _ in range(self.depth):
+            
+            # Roll down to the screen
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            
+            # Get all the link elements
+            anchor_tags = self.driver.find_elements_by_tag_name('a')
+            
+            # Get all the hrefs and put them in the queue
+            for anchor_tag in anchor_tags:
+                href = anchor_tag.get_attribute("href")
+                if ("/status/" in href) and ("/photo/" not in href) and (href not in self.have_visited):
+                    self.queue.put(href)
+                    self.have_visited.add(href)
+
+    def new_crawling(self):
+
+        # Start time of the crawling
+        start_time = datetime.now()
+        
+        # Get all links
+        self.get_all_links()
+        
+        while not self.queue.empty():
+
+            print('--------------')
+
+            # Darkweb database model has a list of crawled links
+            # We will create a Link object and push it in crawled_links
+            database_link_object = dict()
+
+            # Current link in queue
+            current_link = self.queue.get()
+            
+            try:
+
+                # Make request to the current link 
+                self.driver.get(current_link)
+                print('Link found ', current_link)
+
+                # Add images in database
+
+
+                # Create Link object to put in Database 
+                    
+                database_link_object['link'] = current_link
+                
+                try:
+                    database_link_object['posted_by'] = current_link.split("/status/")[0]
+                except:
+                    database_link_object['posted_by'] = ''
+                    
+                try:
+                    caption_element = self.driver.find_element_by_xpath("//*[@id='react-root']/div/div/div[2]/main/div/div/div/div/div/div[2]/div/section/div/div/div[1]/div/div/article/div/div/div/div[3]/div[1]/div/div")
+                    database_link_object['caption'] = caption_element.text
+                    
+                    database_link_object['hashtags'] = []
+                    for span in caption_element.find_elements_by_xpath("./span"):
+                        hashtag = re.findall("#[a-zA-Z0-9]+", span.text)
+                        if len(hashtag) == 1:
+                            database_link_object['hashtags'].append(hashtag[0])
+                            
+                except:
+                    database_link_object['caption'] = ''
+                    database_link_object['hashtags'] = []
+            
+            except:
+                
+                database_link_object['link'] = current_link
+                database_link_object['posted_by'] = ''
+                database_link_object['location'] = ''
+                database_link_object['caption'] = ''
+                database_link_object['hashtags'] = []
+
+            self.crawled_links.append(database_link_object)
+            print('--------------')
+            
+        # Quit the selenium webdriver
+        self.driver.quit()
+
+        # End time of crawling
+        end_time = datetime.now()
+        
+        #Create final result
+        result = {
+            'keyword': self.keyword,
+            'time_taken': time_difference(start_time, end_time),
+            'crawled_links': self.crawled_links
+        }
+        
+        return result

@@ -178,9 +178,6 @@ class DarkWebCrawler:
 
     def new_crawling(self):
 
-        # Clear the images directory to store new images
-        clear_images_directory()
-
         # Start time of the crawling
         start_time = datetime.now()
 

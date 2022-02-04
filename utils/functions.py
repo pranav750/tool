@@ -28,7 +28,7 @@ def save_json(crawled_data):
         
 def save_csv(crawled_data):
     crawled_links = crawled_data['crawled_links']
-    fields = ['link', 'link_status', 'parent_link', 'title', 'text']
+    fields = list(crawled_links[0].keys())
     
     with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.csv'), 'w', encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames = fields)
@@ -54,7 +54,7 @@ def display_wordcloud(wc_words):
     wc_words.seek(0)
     
     wordc.generate(open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'wc_words.txt'), encoding = 'utf-8').read())
-    wordc.to_file(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'wc_img.png'))
+    wordc.to_file(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'wc_img.png'))
 
     top_key_value_pairs = list(wordc.words_.items())[:5]
 
@@ -71,7 +71,11 @@ def texts_from_result(crawled_links):
     texts = []
     for result in crawled_links:
         try:
-            texts.append(result['text'])
+            if 'text' in result.keys():
+                texts.append(result['text'])
+            elif 'hashtags' in result.keys():
+                for hashtag in result['hashtags']:
+                    texts.append(hashtag)
         except:
             pass
 
@@ -103,9 +107,9 @@ def link_status_from_result(darkweb_result):
             pass
 
     return final_result
-
-def clear_images_directory():
-    folder = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images')
+            
+def clear_results_directory():
+    folder = os.path.join(os.path.dirname( __file__ ), '..', 'results')
     for filename in os.listdir(folder):
         file_path = os.path.join(folder, filename)
         try:
@@ -115,10 +119,10 @@ def clear_images_directory():
                 shutil.rmtree(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-
+            
 def create_directory_for_images(number):
     try:
-        os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(number)))
+        os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'images', str(number)))
     except:
         print("Folder already created!")
         
@@ -136,7 +140,7 @@ def link_tree_formation(crawled_links):
             tree_dict[result['link']] = node
             
         
-    link_tree = open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'link_tree.txt'), 'w', encoding = 'utf-8')
+    link_tree = open(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'link_tree.txt'), 'w', encoding = 'utf-8')
     link_tree.flush()
         
     for pre, fill, node in RenderTree(root):

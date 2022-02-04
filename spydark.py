@@ -3,10 +3,10 @@ import argparse
 
 # Importing Dark Web crawling objects from crawler/darkweb.py
 from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
-from crawler.surfaceweb import GoogleCrawler, SurfaceWebCrawler
+from crawler.surfaceweb import GoogleCrawler, InstagramCrawler, SurfaceWebCrawler, TwitterCrawler
 
 # Importing functions from utils/functions.py
-from utils.functions import clear_images_directory, save_json, save_csv, link_status_from_result, create_directory_for_images, open_tor_browser
+from utils.functions import clear_results_directory, save_json, save_csv, link_status_from_result, open_tor_browser
 
 # Creating a parser object
 parser = argparse.ArgumentParser()
@@ -49,7 +49,7 @@ if args.dark:
     print(f'Crawl {args.url} with depth {args.depth} on dark web')
 
     # Clear the images directory for storing new images 
-    clear_images_directory()
+    clear_results_directory()
 
     # Creating link out of keyword or url provided
     link = ''
@@ -98,14 +98,7 @@ elif args.surface:
     print(f'Crawl {args.url} with depth {args.depth} on surface web')
 
     # Clear the images directory for storing new images 
-    clear_images_directory()
-
-    # Creating link out of keyword or url provided
-    link = ''
-    if args.url:
-        link = args.url
-    elif args.keyword:
-        link = 'wiki_link/' + args.keyword
+    clear_results_directory()
         
     if args.google:
         
@@ -125,18 +118,59 @@ elif args.surface:
         # Saving result into static/results.csv
         save_csv(result)
         
+    elif args.insta:
         
-    # Surface web object creation
-    surface_web_object = SurfaceWebCrawler(args.url, args.depth)
-    
-    # Crawling
-    result = surface_web_object.new_crawling()
+        if args.url:
+            print('Instagram crawler can only take keyword')
+            quit()
+            
+        # Surface web object creation for Google
+        surface_web_object = InstagramCrawler(args.keyword, args.depth)
         
-    # Saving result into static/results.json
-    save_json(result)
+        # Crawling
+        result = surface_web_object.new_crawling()
+            
+        # Saving result into static/results.json
+        save_json(result)
+            
+        # Saving result into static/results.csv
+        save_csv(result)
         
-    # Saving result into static/results.csv
-    save_csv(result)
+    elif args.twitter:
+        
+        if args.url:
+            print('Twitter crawler can only take keyword')
+            quit()
+            
+        # Surface web object creation for Google
+        surface_web_object = TwitterCrawler(args.keyword, args.depth)
+        
+        # Crawling
+        result = surface_web_object.new_crawling()
+            
+        # Saving result into static/results.json
+        save_json(result)
+            
+        # Saving result into static/results.csv
+        save_csv(result)
+        
+    else:
+        
+        if args.keyword:
+            print('Surface crawler can only take url')
+            quit()
+        
+        # Surface web object creation
+        surface_web_object = SurfaceWebCrawler(args.url, args.depth)
+        
+        # Crawling
+        result = surface_web_object.new_crawling()
+            
+        # Saving result into static/results.json
+        save_json(result)
+            
+        # Saving result into static/results.csv
+        save_csv(result)
 
 elif args.lsm:
     print (f'Link Similarity checking with depth 2')
