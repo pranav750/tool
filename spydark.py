@@ -3,7 +3,7 @@ import argparse
 
 # Importing Dark Web crawling objects from crawler/darkweb.py
 from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
-from crawler.surfaceweb import SurfaceWebCrawler
+from crawler.surfaceweb import GoogleCrawler, SurfaceWebCrawler
 
 # Importing functions from utils/functions.py
 from utils.functions import clear_images_directory, save_json, save_csv, link_status_from_result, create_directory_for_images, open_tor_browser
@@ -15,6 +15,12 @@ parser = argparse.ArgumentParser()
 web = parser.add_mutually_exclusive_group()
 web.add_argument('--dark', action = 'store_true', help = 'Specify if Dark Web Crawling needed')
 web.add_argument('--surface', action = 'store_true', help = 'Specify if Surface Web Crawling needed')
+
+# Select social media for surface web crawling
+social = parser.add_mutually_exclusive_group()
+social.add_argument('--google', action = 'store_true', help = 'Specify if Google Crawling needed')
+social.add_argument('--insta', action = 'store_true', help = 'Specify if Instagram Crawling needed')
+social.add_argument('--twitter', action = 'store_true', help = 'Specify if Twitter Crawling needed')
 
 # Provide wither url or keyword
 url_or_keyword = parser.add_mutually_exclusive_group()
@@ -100,6 +106,25 @@ elif args.surface:
         link = args.url
     elif args.keyword:
         link = 'wiki_link/' + args.keyword
+        
+    if args.google:
+        
+        if args.url:
+            print('Google crawler can only take keyword')
+            quit()
+            
+        # Surface web object creation for Google
+        surface_web_object = GoogleCrawler(args.keyword, args.depth)
+        
+        # Crawling
+        result = surface_web_object.new_crawling()
+            
+        # Saving result into static/results.json
+        save_json(result)
+            
+        # Saving result into static/results.csv
+        save_csv(result)
+        
         
     # Surface web object creation
     surface_web_object = SurfaceWebCrawler(args.url, args.depth)

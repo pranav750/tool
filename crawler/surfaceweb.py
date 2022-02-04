@@ -15,8 +15,17 @@ from bs4 import BeautifulSoup
 import requests
 from lxml import html
 
+# Import for google crawl
+from googlesearch import search
+
+# Import from selenium web driver
+from selenium import webdriver
+
 # Import from utils/functions.py
 from utils.functions import time_difference, create_wordcloud, clear_images_directory, create_directory_for_images, link_tree_formation
+
+# Chromedriver path
+CHROMEDRIVER_PATH = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'chromedriver', 'chromedriver.exe')
 
 class SurfaceWebCrawler:
     def __init__(self, base_url, depth):
@@ -210,79 +219,151 @@ class SurfaceWebCrawler:
         
         return result
 
-# class Google:
-
-#     def __init__(self, keyword, depth):
-#         self.keyword = keyword
-#         self.depth = depth
-#         self.visitedcoll = connect_mongodb("googledb", "keywords-visited")
-#         self.coll = connect_mongodb("googledb", self.keyword)
-
-#     def googlecrawl(self):
-
-#         visited = False
-#         for _ in self.visitedcoll.find({"keyword":self.keyword}):
-#             visited = True
-
-#         links = []
-#         wc_words = open('crawler/static/crawler/wc_words.txt', 'w', encoding='utf-8')
-
-#         if visited:
-#             for x in self.coll.find():
-#                 links.append(x["Link"])
-#                 try:
-#                     wc_words.write(x["Page content"] + "\n\n")
-#                 except Exception:
-#                     pass
+class GoogleCrawler:
+    def __init__(self, keyword, depth):
         
-#         else:
-            
-#             url = "https://google.com/search?q={}".format('+'.join(self.keyword.split(' ')))
-#             links_found_on_google = list(search(self.keyword, num=25*(self.depth), stop=25*(self.depth), pause=4.0))
-#             links = [url] + links_found_on_google
-
-#             driver = webdriver.Chrome(CHROMEDRIVER_PATH)
-
-#             # TODO: Can try headless webdriver ->
-#             # chrome_options = Options()
-#             # chrome_options.add_argument("--headless")
-#             # driver = webdriver.Chrome(CHROMEDRIVER_PATH, chrome_options=chrome_options)
-
-#             parent = None
-#             link_count = 0
-#             for link in links:
-#                 print(link_count, "->", link)
-#                 try:
-#                     source = requests.get(link, timeout = 20).text
-#                     curr_page = BeautifulSoup(source, 'lxml')
-#                     title = curr_page.find('title').text
-#                     text = ' '.join(curr_page.text.split())
-#                     wc_words.write(text + "\n\n")
-#                     driver.get(link)
-#                     imgs = list(set([element.get_attribute('src') for element in driver.find_elements_by_tag_name('img')]))
-#                     images = []
-#                     for img in imgs:
-#                         images.append([img, False])
-#                     store_images_in_db("googledb", images)
-#                     success = True
-#                 except Exception:
-#                     success = False
-#                 if success:
-#                     print("Found")
-#                     self.coll.insert_one({"Link":link, "Title":title, "Page content":text, "Images": images, "Parent link":parent, "Successfully parsed":success})
-#                 else:
-#                     print("Not found")
-#                     self.coll.insert_one({"Link":link, "Parent link":parent, "Successfully parsed":success})
+        # base keyword
+        self.keyword = keyword
+        
+        # base url
+        self.base_url = "https://google.com/search?q={}".format('+'.join(self.keyword.split(' ')))
+        
+        #depth
+        self.depth = depth
+        
+        # global queue
+        self.queue = Queue()
+        self.queue.put({ 'url': self.base_url, 'parent_link': '' })
+        
+        # visited links
+        self.have_visited = set()
+        self.have_visited.add(self.base_url)
+        
+        # for database
+        self.crawled_links = []
+        self.active_links = 0
+        self.inactive_links = 0
+        
+    # Get all links from google          
+    def get_all_links(self):
+        links_found_on_google = list(search(self.keyword, num = 25 * (self.depth), stop = 25 * (self.depth), pause = 4.0))
+        
+        for link in links_found_on_google:
+            if link not in self.have_visited:
+                self.queue.put({ 'url': link, 'parent_link': self.base_url })
                 
-#                 link_count += 1
-#                 if link_count == 1:
-#                     parent = url
-#             driver.quit()
-#             self.visitedcoll.insert_one({"keyword":self.keyword})
+    # Make a request to the dark web 
+    def make_request(self, url):
+        try:
+            # Request to the Surface Web URL 
+            response = requests.get(url)
 
-#         topFiveWords = display_wordcloud(wc_words)
+            # Print that the link is found and return the response and that link is active
+            print("Page found.... " + url)     
+            return True, response
+        except:
+            # Print that the link is not found and return the response and that link is not active
+            print("Page not found... " + url)
+            return False, None
+
+    def new_crawling(self):
         
-#         return links, topFiveWords
+        # Clear the images directory to store new images
+        clear_images_directory()
+
+        # Start time of the crawling
+        start_time = datetime.now()
+            
+        # Get all links from google
+        self.get_all_links()
+        
+        # Selenium webdriver
+        driver = webdriver.Chrome(CHROMEDRIVER_PATH)
+        
+        while not self.queue.empty():
+
+            print('--------------')
+
+            # Darkweb database model has a list of crawled links
+            # We will create a Link object and push it in crawled_links
+            database_link_object = dict()
+
+            # Current object in queue
+            current_link_object = self.queue.get()
+            current_link = current_link_object['url']
+            parent_link = current_link_object['parent_link']
+
+            # Make request to the current link 
+            link_active, link_response = self.make_request(current_link)
+
+            if link_active:
+
+                self.active_links += 1
+
+                soup = BeautifulSoup(link_response.text, 'lxml')
+                
+                driver.get(current_link)
+
+                # Add images in database
+                # image_links = self.get_all_image_links(soup, current_link)           
+
+                # if len(image_links) > 0:
+                #     self.store_images(image_links)
+                # else:
+                #     print("No Images Found...")
+
+                # Create Link object to put in Database 
+                    
+                try:
+                    database_link_object['title'] = soup.find('title').get_text()
+                except:
+                    database_link_object['title'] = ''
+                        
+                database_link_object['link_status'] = link_active
+                database_link_object['link'] = current_link
+                database_link_object['parent_link'] = parent_link
+                    
+                try:
+                    database_link_object['text'] = soup.get_text(" ")
+                except:
+                    database_link_object['text'] = ''
+                    
+            else:
+
+                self.inactive_links += 1
+
+                    # Create Link object to put in Database
+                database_link_object['title'] = ''
+                database_link_object['link_status'] = link_active
+                database_link_object['link'] = current_link
+                database_link_object['parent_link'] = parent_link
+                database_link_object['text'] = ''
+
+            self.crawled_links.append(database_link_object)
+            print('--------------')
+            
+        driver.quit()
+
+        # End time of crawling
+        end_time = datetime.now()
+
+        # Create word cloud
+        top_five_keywords = create_wordcloud(self.crawled_links)
+        
+        # Create link tree
+        link_tree_formation(self.crawled_links)
+        
+        #Create final result
+        result = {
+            'link': self.base_url,
+            'active_links': self.active_links,
+            'inactive_links': self.inactive_links,
+            'top_five_keywords': top_five_keywords,
+            'time_taken': time_difference(start_time, end_time),
+            'crawled_links': self.crawled_links
+        }
+        
+        return result
 
 
 # class Instagram:
