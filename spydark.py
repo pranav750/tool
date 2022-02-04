@@ -19,7 +19,7 @@ web.add_argument('--surface', action = 'store_true', help = 'Specify if Surface 
 # Select social media for surface web crawling
 social = parser.add_mutually_exclusive_group()
 social.add_argument('--google', action = 'store_true', help = 'Specify if Google Crawling needed')
-social.add_argument('--insta', action = 'store_true', help = 'Specify if Instagram Crawling needed')
+social.add_argument('--instagram', action = 'store_true', help = 'Specify if Instagram Crawling needed')
 social.add_argument('--twitter', action = 'store_true', help = 'Specify if Twitter Crawling needed')
 
 # Provide wither url or keyword
@@ -118,7 +118,7 @@ elif args.surface:
         # Saving result into static/results.csv
         save_csv(result)
         
-    elif args.insta:
+    elif args.instagram:
         
         if args.url:
             print('Instagram crawler can only take keyword')

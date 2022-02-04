@@ -254,7 +254,7 @@ class GoogleCrawler:
         
     # Get all links from google          
     def get_all_links(self):
-        links_found_on_google = list(search(self.keyword, num = 25 * (self.depth), stop = 25 * (self.depth), pause = 4.0))
+        links_found_on_google = list(search(self.keyword, num = 15 * (self.depth), stop = 25 * (self.depth), pause = 8.0, verify_ssl = True))
         
         for link in links_found_on_google:
             if link not in self.have_visited:

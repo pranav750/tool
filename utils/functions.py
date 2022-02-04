@@ -23,14 +23,14 @@ def time_difference(start_time, end_time):
     return f'{int(minutes[0])} minutes, {int(minutes[1])} seconds'
 
 def save_json(crawled_data):
-    with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.json'), 'w', encoding="utf-8") as results:
+    with open(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'results.json'), 'w', encoding="utf-8") as results:
         json.dump(crawled_data, results)
         
 def save_csv(crawled_data):
     crawled_links = crawled_data['crawled_links']
     fields = list(crawled_links[0].keys())
     
-    with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.csv'), 'w', encoding="utf-8") as csvfile:
+    with open(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'results.csv'), 'w', encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames = fields)
         writer.writeheader()
         writer.writerows(crawled_links)

@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
 
 # Import from utils/functions.py
-from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images, link_tree_formation, open_tor_browser
+from utils.functions import time_difference, create_wordcloud, links_from_result, create_directory_for_images, link_tree_formation, open_tor_browser
 
 # Import .env variables
 from dotenv import dotenv_values
