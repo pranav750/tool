@@ -2,7 +2,7 @@
 import argparse
 
 # Importing Dark Web crawling objects from crawler/darkweb.py
-from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
+from crawler.darkweb import DarkWebCrawler, DFSDarkWebCrawler, MultiThreaded, link_similarity
 from crawler.surfaceweb import GoogleCrawler, InstagramCrawler, SurfaceWebCrawler, TwitterCrawler
 
 # Importing functions from utils/functions.py
@@ -28,9 +28,10 @@ url_or_keyword.add_argument('--url', type = str, help = 'Specify the URL')
 url_or_keyword.add_argument('--keyword', type = str, help = 'Specify the Keyword')
 
 # Select either iterative crawling or multi threaded crawling
-multi_or_iterative = parser.add_mutually_exclusive_group()
-multi_or_iterative.add_argument('--multi', action = "store_true", help = 'Specify if multi-threaded crawling is required')
-multi_or_iterative.add_argument('--iterative', action = "store_true", help = 'Specify if iterative crawling is required')
+algorithm = parser.add_mutually_exclusive_group()
+algorithm.add_argument('--multi', action = "store_true", help = 'Specify if multi-threaded crawling is required')
+algorithm.add_argument('--iterative', action = "store_true", help = 'Specify if iterative crawling is required')
+algorithm.add_argument('--dfs', action = "store_true", help = 'Specify if DFS crawling is required')
 
 # Provide depth for crawling, default is 1
 parser.add_argument('--depth', type = int, default = 1, help = 'Specify the depth')
@@ -74,6 +75,24 @@ if args.dark:
         save_json(result)
         
         # Saving result into static/results.csv
+        save_csv(result)
+        
+    # DFS dark web crawling
+    elif args.dfs:
+        
+        # Dark web object creation
+        dark_web_object =  DFSDarkWebCrawler(link, args.depth)
+        
+        # Start Tor Browser
+        open_tor_browser()
+        
+        # Crawling
+        result = dark_web_object.new_crawling()
+        
+        # Saving result into results/results.json
+        save_json(result)
+        
+        # Saving result into results/results.csv
         save_csv(result)
         
     # Multi threaded dark web crawling
