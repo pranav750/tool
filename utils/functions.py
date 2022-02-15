@@ -1,3 +1,4 @@
+from tkinter import E
 from wordcloud import WordCloud, STOPWORDS
 from urllib.parse import urlparse
 from anytree import Node, RenderTree
@@ -131,14 +132,16 @@ def link_tree_formation(crawled_links):
     root = None
     tree_dict = dict()
     for result in crawled_links:
+        node = Node(result['link'])
+        tree_dict[result['link']] = node
+    
+    for result in crawled_links:
         if result['parent_link'] == '':
-            root = Node(result['link'])
-            tree_dict[result['link']] = root
+            root = tree_dict[result['link']]
 
         else:
-            node = Node(result['link'],parent = tree_dict[result['parent_link']])
-            tree_dict[result['link']] = node
-            
+            tree_dict[result['link']].parent = tree_dict[result['parent_link']]
+
         
     link_tree = open(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'link_tree.txt'), 'w', encoding = 'utf-8')
     link_tree.flush()

@@ -417,7 +417,7 @@ class DFSDarkWebCrawler:
         depth = depth - 1
         
         # Mark this link as visited
-        self.have_visited(current_link)
+        self.have_visited.add(current_link)
         
         # Darkweb database model has a list of crawled links
         # We will create a Link object and push it in crawled_links
@@ -460,7 +460,8 @@ class DFSDarkWebCrawler:
                 links_from_current_link = self.get_all_links(soup, current_link)
                 
                 for link in links_from_current_link:
-                    self.dfs(link, current_link, depth)
+                    if link not in self.have_visited:
+                        self.dfs(link, current_link, depth)
                 
         else:
 
