@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import current_thread
 
 # Import from utils/functions.py
-from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images, link_tree_formation, open_tor_browser
+from utils.functions import time_difference, create_wordcloud, links_from_result, clear_images_directory, create_directory_for_images, link_tree_formation, save_json
 
 # Import .env variables
 from dotenv import dotenv_values
@@ -147,7 +147,7 @@ class DarkWebCrawler:
         return random.choice(uastrings)
     
     # Get all images from the soup object
-    def get_all_image_links(self, soup):
+    def get_all_image_links(self, soup,current_link):
         image_links = []
         for image_tag in soup.find_all('img', src = True):
             src_text = image_tag['src']
@@ -155,7 +155,7 @@ class DarkWebCrawler:
                 image_links.append(urljoin(current_link, src_text))
             else:
                 image_links.append(src_text)
-                
+        return image_links
     # Get all links from the soup object           
     def get_all_links(self, soup, current_link):
         # Links added into queue from this soup object
@@ -212,12 +212,12 @@ class DarkWebCrawler:
                     soup = BeautifulSoup(link_response.text, 'lxml')
 
                     # Add images in database
-                    # image_links = self.get_all_image_links(soup)           
+                    image_links = self.get_all_image_links(soup,current_link)           
 
-                    # if len(image_links) > 0:
-                    #     self.store_images(image_links, current_link)
-                    # else:
-                    #     print("No Images Found...")
+                    if len(image_links) > 0:
+                        self.store_images(image_links, current_link)
+                    else:
+                        print("No Images Found...")
 
                     # Create Link object to put in Database 
                     
@@ -350,13 +350,13 @@ class MultiThreaded():
         soup = BeautifulSoup(html, 'lxml')
 
         # Scrape info from the current link
-        self.scrape_info(True, soup, current_link, parent_link)
+        self.scrape_info(True, soup, current_link, parent_link, html)
         
         # Put all links from soup object into queue
         self.get_all_links(soup, current_link, depth)
  
     # Scrape info from the current link and put into database
-    def scrape_info(self, is_active, soup, current_link, parent_link):
+    def scrape_info(self, is_active, soup, current_link, parent_link, html):
         
         # We will create a Link object and push it in crawled_links
         database_link_object = dict()
@@ -373,6 +373,7 @@ class MultiThreaded():
             database_link_object['link_status'] = True
             database_link_object['link'] = current_link
             database_link_object['parent_link'] = parent_link
+            database_link_object['html'] = html
             
             try:
                 database_link_object['text'] = soup.get_text(" ")
@@ -388,6 +389,7 @@ class MultiThreaded():
             database_link_object['link'] = current_link
             database_link_object['parent_link'] = parent_link
             database_link_object['text'] = ''
+            database_link_object['html'] = ''
             
         self.crawled_links.append(database_link_object)
 
@@ -430,7 +432,7 @@ class MultiThreaded():
             print('Not Found Current Link ' + current_link)
             
             # Create a not found object and put it in database
-            self.scrape_info(False, None, current_link, parent_link)
+            self.scrape_info(False, None, current_link, parent_link, None)
 
     # Scrape the url and return the result
     def scrape_page(self, current_link, parent_link, headers, depth):
@@ -464,10 +466,24 @@ class MultiThreaded():
             try:
                 
                 # First link from queue
-                link_info = self.queue.get(timeout = 20)
+                link_info = self.queue.get(timeout = 40)
                 current_link = link_info['url']
                 parent_link = link_info['parent_link']
                 depth = link_info['depth']
+
+                if len(self.crawled_links) % 100 == 0 and len(self.crawled_links) > 0:
+
+                    print("Backing up the data.............................")
+
+                    #Create result
+                    result = {
+                        'link': self.base_url,
+                        'active_links': self.active_links,
+                        'inactive_links': self.inactive_links,
+                        'crawled_links': self.crawled_links
+                    }
+
+                    save_json(result)
                 
                 if depth > 0:
                                         

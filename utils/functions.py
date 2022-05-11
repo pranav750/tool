@@ -30,7 +30,7 @@ def save_csv(crawled_data):
     crawled_links = crawled_data['crawled_links']
     fields = ['link', 'link_status', 'parent_link', 'title', 'text']
     
-    with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.csv'), 'w') as csvfile:
+    with open(os.path.join(os.path.dirname( __file__ ), '..', 'static', 'results.csv'), 'w',encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames = fields)
         writer.writeheader()
         writer.writerows(crawled_links)
