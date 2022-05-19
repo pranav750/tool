@@ -1,12 +1,27 @@
 # Import for creating the command line utility
 import argparse
 
+# Importing BFS crawler
+from crawler.darkweb.bfs import BFSDarkWebCrawler
+
+# Importing Multi threaded crawler
+from crawler.darkweb.multithreaded import MultiThreadedDarkWebCrawler 
+
+# Importing DFS crawler
+from crawler.darkweb.multithreaded import DFSDarkWebCrawler 
+
 # Importing Dark Web crawling objects from crawler/darkweb.py
-from crawler.darkweb import DarkWebCrawler, DFSDarkWebCrawler, MultiThreaded, link_similarity
+from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
 from crawler.surfaceweb import GoogleCrawler, InstagramCrawler, SurfaceWebCrawler, TwitterCrawler
 
 # Importing functions from utils/functions.py
-from utils.functions import clear_results_directory, save_json, save_csv, link_status_from_result, open_tor_browser
+from utils.functions import clear_results_directory, open_tor_browser
+
+# Importing functions from utils/save.py
+from utils.save import save_json, save_csv
+
+# Importing functions from utils/status.py
+from utils.status import link_status_from_result
 
 # Creating a parser object
 parser = argparse.ArgumentParser()
@@ -29,16 +44,19 @@ url_or_keyword.add_argument('--keyword', type = str, help = 'Specify the Keyword
 
 # Select either iterative crawling or multi threaded crawling
 algorithm = parser.add_mutually_exclusive_group()
-algorithm.add_argument('--multi', action = "store_true", help = 'Specify if multi-threaded crawling is required')
-algorithm.add_argument('--iterative', action = "store_true", help = 'Specify if iterative crawling is required')
+algorithm.add_argument('--multi', action = "store_true", help = 'Specify if Multi-threaded crawling is required')
+algorithm.add_argument('--bfs', action = "store_true", help = 'Specify if BFS crawling is required')
 algorithm.add_argument('--dfs', action = "store_true", help = 'Specify if DFS crawling is required')
 
 # Provide depth for crawling, default is 1
 parser.add_argument('--depth', type = int, default = 1, help = 'Specify the depth')
 
+
 parser.add_argument('--lsm', action = "store_true", help='Specify the dark web link')
 
+
 parser.add_argument('--links', nargs='+', help='Specify the dark web links for link similarity')
+
 
 parser.add_argument('--lst', action = "store_true", help='Specify the dark web link')
 
@@ -47,10 +65,6 @@ args = parser.parse_args()
 
 # Dark Web crawling
 if args.dark:
-    print(f'Crawl {args.url} with depth {args.depth} on dark web')
-
-    # Clear the images directory for storing new images 
-    clear_results_directory()
 
     # Creating link out of keyword or url provided
     link = ''
@@ -59,17 +73,25 @@ if args.dark:
     elif args.keyword:
         link = 'wiki_link/' + args.keyword
 
+    if args.url:
+        print(f'Crawl {args.url} with depth {args.depth} on dark web')
+    else:
+        print(f'Crawl {args.keyword} with depth {args.depth} on dark web')
+
+    # Clear the results directory for storing new data 
+    clear_results_directory()
+
     # Iterative dark web crawling
-    if args.iterative: 
+    if args.bfs: 
         
         # Dark web object creation
-        dark_web_object =  DarkWebCrawler(link, args.depth)
+        dark_web_object =  BFSDarkWebCrawler(link, args.depth)
         
         # Start Tor Browser
         open_tor_browser()
         
         # Crawling
-        result = dark_web_object.new_crawling()
+        result = dark_web_object.crawl()
         
         # Saving result into static/results.json
         save_json(result)
@@ -87,7 +109,7 @@ if args.dark:
         open_tor_browser()
         
         # Crawling
-        result = dark_web_object.new_crawling()
+        result = dark_web_object.crawl()
         
         # Saving result into results/results.json
         save_json(result)
@@ -99,13 +121,13 @@ if args.dark:
     elif args.multi:
         
         # Dark web object creation
-        dark_web_object = MultiThreaded(args.url, args.depth)
+        dark_web_object = MultiThreadedDarkWebCrawler(link, args.depth)
         
         # Start Tor Browser
         open_tor_browser()
         
         # Crawling
-        result = dark_web_object.run_scraper()
+        result = dark_web_object.crawl()
 
         # Saving result into static/results.json
         save_json(result)
@@ -193,21 +215,43 @@ elif args.surface:
 
 elif args.lsm:
     print (f'Link Similarity checking with depth 2')
+
+
     result = link_similarity(args.links, 2)
+
+    # Saving result into static/results.json
     save_json(result)
 
 elif args.lst:
-    print('Link Status cheking')
+
+    # Creating link out of keyword or url provided
     link = ''
     if args.url:
         link = args.url
     elif args.keyword:
         link = 'wiki_link/' + args.keyword
-    dark_web_object =  DarkWebCrawler(link, args.depth)
+
+    if args.url:
+        print(f'Check Link status of {args.url} with depth {args.depth} on dark web')
+    else:
+        print(f'Check Link status of {args.keyword} with depth {args.depth} on dark web')
+
+    # Clear the results directory for storing new data 
+    clear_results_directory()
+
+     # Dark web object creation
+    dark_web_object =  BFSDarkWebCrawler(link, args.depth)
         
+    # Start Tor Browser
     open_tor_browser()
         
-    result = dark_web_object.new_crawling()
+    # Crawling
+    result = dark_web_object.crawl()
+
+    # Link status from result
     final_result = link_status_from_result(result)
+
+    # Saving result into static/results.json
     save_json(final_result)
+    
     
