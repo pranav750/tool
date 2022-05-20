@@ -10,13 +10,15 @@
 1) First of all install tor browser in your computer 
 2) Open the terminal and then go to the location where tor.exe file is present (It might be under main Tor folder/Browser/TorBrowser)
 3) Run this command in terminal and put your password there ``` tor ---hash-password <your_password> | more ```
-4) Then it will generate hash password copy that password 
+4) Then it will generate hash password , copy that password 
 5) Then Go to the location Tor_Browser\Browser\TorBrowser\Data\Tor and open torrc file
 6) write this in torrc file (hashpassword is the one you copied earlier)
 ```
    ControlPort 9051 
    HashedControlPassword <hash_password>
 ```
+
+
 ### Tool Setup
 1) Clone this repository using and open the tool in code editor
 ```
@@ -62,12 +64,28 @@ Threads are sometimes called light-weight processes and they do not require much
 <li><strong>Link Tree:</strong> After the crawling process is done Link Tree file will generate the link tree with the hierarchical structure of links</li>
         <img src="LinkTree.png"/>
         
-<li><strong>Saving crawled Info</strong> : After crawling the dark web whatever the data is gathered from the url that will be stored into JSON/CSV file. <br>
-  The json file will contain following details for each link :  <br>  <strong>{<br>&nbsp; &nbsp; base_url,<br>&nbsp; &nbsp; active_links,<br>&nbsp; &nbsp; inactive_links,<br>&nbsp; &nbsp; top_five_keywords,<br>&nbsp; &nbsp; time_taken,<br> &nbsp; &nbsp; crawled_links : [{ <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  title, <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  link_status, <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;   link,<br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  parent_link,<br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  text,<br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  html  <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  }] <br> }</strong> 
-        <br>
-        </li>
+<li><strong>Saving Crawled Info</strong> : After crawling the dark web whatever the data is gathered from the url that will be stored into JSON/CSV file. <br>
+  The json file will contain following details for each link  <br> 
+ </li>
 </ul>
    
+```
+  {
+     base_url,
+     active_links,
+     inactive_links,
+     top_five_keywords,
+     time_taken,
+     crawled_links : [{
+                title,
+                link_status,
+                link,
+                parent_link,
+                text,
+                html
+        }]
+  }
+```
     
 ## Tech Stack
         
