@@ -10,9 +10,13 @@ TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
 
 # Starting Tor Browser
 def open_tor_browser():
+
+    output("Starting Tor Browser...", True)
+
     os.startfile(TOR_BROWSER_PATH)
     time.sleep(10)
-    print("Tor Browser started")
+
+    output("Tor Browser Started.", False)
 
 # Calculate time difference
 def time_difference(start_time, end_time):
@@ -22,6 +26,9 @@ def time_difference(start_time, end_time):
             
 # Clearing the results folder
 def clear_results_directory():
+
+    output("Clearing the results directory...", True)
+
     folder = os.path.join(os.path.dirname( __file__ ), '..', 'results')
 
     for filename in os.listdir(folder):
@@ -34,10 +41,27 @@ def clear_results_directory():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
+    output("Results directory cleared.", False)
+
 # Creating directory for outputing images
 def create_directory_for_images(number):
+
+    output("Creating the directory for images...", True)
+
     try:
         os.mkdir(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'images', str(number)))
+        output("Image directory created.", False)
     except:
-        print("Folder already created!")
+        output("Folder already created.", False)
+
+# Printing the information
+def output(text, start):
+
+    if start:
+        print("-" * 20)
+    
+    print(text)
+    
+    if not start:
+        print("-" * 20)
     

@@ -235,7 +235,7 @@ class MultiThreadedDarkWebCrawler:
                 depth = link_info['depth']
 
                 # Backup the data at every 1000 links data
-                if len(self.crawled_links) % 1000 == 0 and len(self.crawled_links) > 0:
+                if len(self.crawled_links) % 20 == 0 and len(self.crawled_links) > 0:
 
                     # Create final result
                     result = {

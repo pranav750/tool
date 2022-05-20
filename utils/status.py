@@ -16,8 +16,6 @@ def link_status_from_result(darkweb_result):
         'link': darkweb_result['link'],
         'active_links': darkweb_result['active_links'],
         'inactive_links': darkweb_result['inactive_links'],
-        'top_five_keywords': darkweb_result['top_five_keywords'],
-        'time_taken': darkweb_result['time_taken'],
         'link_statuses': dict()
     }
 

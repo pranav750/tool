@@ -2,15 +2,7 @@
 import os
 
 # For getting the time for crawling 
-import time
 from datetime import datetime
-
-# Import for random selection in array
-import random
-
-# For changing Tor IP address by creating a new relay circuit
-from stem import Signal
-from stem.control import Controller
 
 # Importing queue for DFS algorithm
 from queue import Queue
@@ -32,24 +24,8 @@ from utils.tree import link_tree_formation
 # Import from utils/wordcloud.py
 from utils.wordcloud import create_wordcloud
 
-# For accessing the values from the .env file
-from dotenv import dotenv_values
-
-config = dotenv_values(".env")
-TORCC_HASH_PASSWORD = config['TORCC_HASH_PASSWORD']
-TOR_BROWSER_PATH = config['TOR_BROWSER_PATH']
-
-class BFSDarkWebCrawler:
+class SurfaceWebCrawler:
     def __init__(self, base_url, depth):
-
-        # add time delay between each request to avoid DOS attack
-        self.wait_time = 1
-        
-        # socks proxies required for TOR usage
-        self.proxies = {
-            'http' : 'socks5h://127.0.0.1:9150', 
-            'https' : 'socks5h://127.0.0.1:9150'
-        }
         
         # base url
         self.base_url = base_url
@@ -71,23 +47,9 @@ class BFSDarkWebCrawler:
         self.crawled_links = []
         self.active_links = 0
         self.inactive_links = 0
-
-    # Get the current IP address to check whether the IP address of tor changed or not.
-    def get_current_ip(self):
-        try:
-            response = requests.get('http://httpbin.org/ip', proxies = self.proxies)
-            return response.text.split(",")[-1].split('"')[3]
-        except Exception as e:
-            return str(e)
-
-    # After each request, change the tor IP address
-    def renew_tor_ip(self):
-        with Controller.from_port(port = 9051) as controller:
-            controller.authenticate(password = TORCC_HASH_PASSWORD)
-            controller.signal(Signal.NEWNYM)
-
+        
     # Store images in the folder 
-    def store_images(self, image_links):
+    def store_images(self, image_links, current_link):
         
         # Create a directory to store images for given link
         create_directory_for_images(self.active_links + self.inactive_links)
@@ -110,21 +72,14 @@ class BFSDarkWebCrawler:
                 print(str(e))
                 
         output("Images crawling done", False)
-
+        
     # Make a request to the dark web 
     def make_request(self, url):
         try:
-            # Before making the request, renew the Tor IP address
-            self.renew_tor_ip()                
-            time.sleep(self.wait_time)
-            current_ip = self.get_current_ip()
-                
-            # Print current IP address
-            output("IP : {}".format(current_ip), True)
+            output("Crawling...", True)
 
-            # Request to the Dark Web URL using a random user agent
-            headers = { 'User-Agent': self.GET_UA() }
-            response = requests.get(url, proxies = self.proxies, headers = headers, timeout = 20)
+            # Request to the Surface Web URL 
+            response = requests.get(url)
 
             # Print that the link is found and return the response and that link is active
             output("Page found.... " + url, False)     
@@ -133,23 +88,7 @@ class BFSDarkWebCrawler:
             # Print that the link is not found and return the response and that link is not active
             output("Page not found... " + url, False)
             return False, None
-
-    # Random User Agent
-    def GET_UA(self):
-        uastrings = ["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.72 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10) AppleWebKit/600.1.25 (KHTML, like Gecko) Version/8.0 Safari/600.1.25",
-                "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0",
-                "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/600.1.17 (KHTML, like Gecko) Version/7.1 Safari/537.85.10",
-                "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko",
-                "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0",
-                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.104 Safari/537.36"
-                ]
- 
-        return random.choice(uastrings)
-    
+        
     # Get all images from the soup object
     def get_all_image_links(self, soup, current_link):
         image_links = []
@@ -160,7 +99,7 @@ class BFSDarkWebCrawler:
             else:
                 image_links.append(src_text)
         return image_links
-                
+    
     # Get all links from the soup object           
     def get_all_links(self, soup, current_link):
         # Links added into queue from this soup object
@@ -179,32 +118,17 @@ class BFSDarkWebCrawler:
                 self.queue.put({ 'url': link_in_anchor_tag, 'parent_link': current_link }) 
                 self.have_visited.add(link_in_anchor_tag)
                 links_added += 1
-
-    # Main crawling 
+                
     def crawl(self):
 
         # Start time of the crawling
         start_time = datetime.now()
-
+        print(self.queue)
         depth = self.depth
         while not self.queue.empty() and depth > 0:
 
             # All the links currently in the queue
             size = self.queue.qsize()
-
-            # Backup the data at every 1000 links data
-            if len(self.crawled_links) % 1000 == 0 and len(self.crawled_links) > 0:
-
-                # Create final result
-                result = {
-                    'link': self.base_url,
-                    'active_links': self.active_links,
-                    'inactive_links': self.inactive_links,
-                    'time_taken': time_difference(start_time, datetime.now()),
-                    'crawled_links': self.crawled_links
-                }
-
-                backup(result)
 
             for _ in range(size):
 

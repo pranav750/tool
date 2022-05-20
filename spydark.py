@@ -8,11 +8,19 @@ from crawler.darkweb.bfs import BFSDarkWebCrawler
 from crawler.darkweb.multithreaded import MultiThreadedDarkWebCrawler 
 
 # Importing DFS crawler
-from crawler.darkweb.multithreaded import DFSDarkWebCrawler 
+from crawler.darkweb.dfs import DFSDarkWebCrawler 
+
+# Importing Surface Web Crawler
+from crawler.surfaceweb.surfaceweb import SurfaceWebCrawler
+
+# Importing Google Web Crawler
+from crawler.surfaceweb.google import GoogleCrawler
+
+# Importing Link Similarity
+from crawler.darkweb.similarity import link_similarity
 
 # Importing Dark Web crawling objects from crawler/darkweb.py
-from crawler.darkweb import DarkWebCrawler, MultiThreaded, link_similarity
-from crawler.surfaceweb import GoogleCrawler, InstagramCrawler, SurfaceWebCrawler, TwitterCrawler
+# from crawler.surfaceweb import GoogleCrawler, InstagramCrawler, SurfaceWebCrawler, TwitterCrawler
 
 # Importing functions from utils/functions.py
 from utils.functions import clear_results_directory, open_tor_browser
@@ -57,7 +65,7 @@ parser.add_argument('--lsm', action = "store_true", help='Specify the dark web l
 
 parser.add_argument('--links', nargs='+', help='Specify the dark web links for link similarity')
 
-
+# For getting the Link Status
 parser.add_argument('--lst', action = "store_true", help='Specify the dark web link')
 
 # Get the arguments
@@ -136,13 +144,17 @@ if args.dark:
         save_csv(result)
 
 elif args.surface:
-    print(f'Crawl {args.url} with depth {args.depth} on surface web')
+
+    if args.url:
+        print(f'Crawl {args.url} with depth {args.depth} on surface web')
+    else:
+        print(f'Crawl {args.keyword} with depth {args.depth} on surface web')
 
     # Clear the images directory for storing new images 
     clear_results_directory()
-        
+
     if args.google:
-        
+
         if args.url:
             print('Google crawler can only take keyword')
             quit()
@@ -151,72 +163,120 @@ elif args.surface:
         surface_web_object = GoogleCrawler(args.keyword, args.depth)
         
         # Crawling
-        result = surface_web_object.new_crawling()
+        result = surface_web_object.crawl()
             
         # Saving result into static/results.json
         save_json(result)
             
         # Saving result into static/results.csv
         save_csv(result)
-        
-    elif args.instagram:
-        
-        if args.url:
-            print('Instagram crawler can only take keyword')
-            quit()
-            
-        # Surface web object creation for Google
-        surface_web_object = InstagramCrawler(args.keyword, args.depth)
-        
-        # Crawling
-        result = surface_web_object.new_crawling()
-            
-        # Saving result into static/results.json
-        save_json(result)
-            
-        # Saving result into static/results.csv
-        save_csv(result)
-        
-    elif args.twitter:
-        
-        if args.url:
-            print('Twitter crawler can only take keyword')
-            quit()
-            
-        # Surface web object creation for Google
-        surface_web_object = TwitterCrawler(args.keyword, args.depth)
-        
-        # Crawling
-        result = surface_web_object.new_crawling()
-            
-        # Saving result into static/results.json
-        save_json(result)
-            
-        # Saving result into static/results.csv
-        save_csv(result)
-        
+
     else:
         
         if args.keyword:
-            print('Surface crawler can only take url')
+            print("Surface web crawling can only be done on keyword.")
             quit()
-        
-        # Surface web object creation
+
+        # Surface web object creation for Google
         surface_web_object = SurfaceWebCrawler(args.url, args.depth)
-        
+
         # Crawling
-        result = surface_web_object.new_crawling()
-            
+        result = surface_web_object.crawl()
+
         # Saving result into static/results.json
         save_json(result)
             
         # Saving result into static/results.csv
         save_csv(result)
+        
+#     if args.google:
+        
+#         if args.url:
+#             print('Google crawler can only take keyword')
+#             quit()
+            
+#         # Surface web object creation for Google
+#         surface_web_object = GoogleCrawler(args.keyword, args.depth)
+        
+#         # Crawling
+#         result = surface_web_object.new_crawling()
+            
+#         # Saving result into static/results.json
+#         save_json(result)
+            
+#         # Saving result into static/results.csv
+#         save_csv(result)
+        
+#     elif args.instagram:
+        
+#         if args.url:
+#             print('Instagram crawler can only take keyword')
+#             quit()
+            
+#         # Surface web object creation for Google
+#         surface_web_object = InstagramCrawler(args.keyword, args.depth)
+        
+#         # Crawling
+#         result = surface_web_object.new_crawling()
+            
+#         # Saving result into static/results.json
+#         save_json(result)
+            
+#         # Saving result into static/results.csv
+#         save_csv(result)
+        
+#     elif args.twitter:
+        
+#         if args.url:
+#             print('Twitter crawler can only take keyword')
+#             quit()
+            
+#         # Surface web object creation for Google
+#         surface_web_object = TwitterCrawler(args.keyword, args.depth)
+        
+#         # Crawling
+#         result = surface_web_object.new_crawling()
+            
+#         # Saving result into static/results.json
+#         save_json(result)
+            
+#         # Saving result into static/results.csv
+#         save_csv(result)
+        
+#     else:
+        
+#         if args.keyword:
+#             print('Surface crawler can only take url')
+#             quit()
+        
+#         # Surface web object creation
+#         surface_web_object = SurfaceWebCrawler(args.url, args.depth)
+        
+#         # Crawling
+#         result = surface_web_object.new_crawling()
+            
+#         # Saving result into static/results.json
+#         save_json(result)
+            
+#         # Saving result into static/results.csv
+#         save_csv(result)
 
 elif args.lsm:
-    print (f'Link Similarity checking with depth 2')
 
+    if len(args.links) == 0:
+        print("Provide some links for checking Link Similarity")
+        quit()
+    else:
+        print("Check Link Similarity for provided links on depth 2")
 
+    print(args.links)
+    # Clear the results directory for storing new data 
+    clear_results_directory()
+        
+    # Start Tor Browser
+    open_tor_browser()
+
+    # Checking Link Similarity
     result = link_similarity(args.links, 2)
 
     # Saving result into static/results.json

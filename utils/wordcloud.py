@@ -32,13 +32,15 @@ def display_wordcloud(wc_words):
     wordc.to_file(os.path.join(os.path.dirname( __file__ ), '..', 'results', 'wc_img.png'))
 
     top_key_value_pairs = list(wordc.words_.items())[:5]
-
+    
     wc_words.flush()
     wc_words.close()
 
     top_five_keywords = []
     for top_key_value_pair in top_key_value_pairs:
         top_five_keywords.append(top_key_value_pair[0])
+
+    return top_five_keywords
 
 # Creating word cloud from the crawled links and returns the top five keywords
 def create_wordcloud(crawled_links):

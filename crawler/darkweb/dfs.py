@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 import requests
 
 # Import from utils/functions.py
-from utils.functions import time_difference, create_directory_for_images
+from utils.functions import output, time_difference, create_directory_for_images
 
 # Import from utils/save.py
 from utils.save import backup
@@ -94,7 +94,7 @@ class DFSDarkWebCrawler:
         folder_name = os.path.join(os.path.dirname( __file__ ), '..', 'static', 'images', str(self.active_links + self.inactive_links))
 
         i = 0
-        print("Images crawling...")
+        output("Images crawling...", True)
         
         # Store the images in the created folder
         for image_link in image_links:
@@ -107,7 +107,7 @@ class DFSDarkWebCrawler:
             except Exception as e:
                 print(str(e))
                 
-        print("Images crawling done")
+        output("Images crawling done", False)
 
     # Make a request to the dark web 
     def make_request(self, url):
@@ -118,18 +118,18 @@ class DFSDarkWebCrawler:
             current_ip = self.get_current_ip()
                 
             # Print current IP address
-            print("IP : {}".format(current_ip))
+            output("IP : {}".format(current_ip), True)
 
             # Request to the Dark Web URL using a random user agent
             headers = { 'User-Agent': self.GET_UA() }
             response = requests.get(url, proxies = self.proxies, headers = headers, timeout = 20)
 
             # Print that the link is found and return the response and that link is active
-            print("Page found.... " + url)     
+            output("Page found.... " + url, False)     
             return True, response
         except:
             # Print that the link is not found and return the response and that link is not active
-            print("Page not found... " + url)
+            output("Page not found... " + url, False)
             return False, None
 
     # Random User Agent
@@ -199,9 +199,6 @@ class DFSDarkWebCrawler:
         # Reduce the depth
         depth = depth - 1
         
-        # Mark this link as visited
-        self.have_visited.add(current_link)
-        
         # Darkweb database model has a list of crawled links
         # We will create a Link object and push it in crawled_links
         database_link_object = dict()
@@ -242,7 +239,7 @@ class DFSDarkWebCrawler:
             if current_link not in self.have_visited:
                 self.active_links += 1
                 self.crawled_links.append(database_link_object)
-            else:
+
                 # Mark this link as visited
                 self.have_visited.add(current_link)
 
@@ -265,7 +262,7 @@ class DFSDarkWebCrawler:
             if current_link not in self.have_visited:
                 self.inactive_links += 1
                 self.crawled_links.append(database_link_object)
-            else:
+
                 # Mark this link as visited
                 self.have_visited.add(current_link)
 
