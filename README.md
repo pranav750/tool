@@ -60,9 +60,12 @@ Multiple threads within a process share the same data space with the main thread
 Threads are sometimes called light-weight processes and they do not require much memory overhead; they are cheaper than processes.</li>
 <li><strong>Word Cloud</strong> - Word cloud is a data visualisation technique used for representing text data in which the size of each word indicates its frequency or importance. Significant textual data points can be highlighted using a word cloud. Word clouds are widely used for analysing data from social network websites.</li>
 <li><strong>Link Tree:</strong> After the crawling process is done Link Tree file will generate the link tree with the hierarchical structure of links</li>
+        <img src="LinkTree.png"/>
         
 <li><strong>Saving crawled Info</strong> : After crawling the dark web whatever the data is gathered from the url that will be stored into JSON/CSV file. <br>
-  The json file will contain following details for each link : <br>{ total_links_crawled, active_links, inactive_links, top_five_keywords, time_taken_for_crwaling}</li>
+  The json file will contain following details for each link :  <br>  <strong>{<br>&nbsp; &nbsp; base_url,<br>&nbsp; &nbsp; active_links,<br>&nbsp; &nbsp; inactive_links,<br>&nbsp; &nbsp; top_five_keywords,<br>&nbsp; &nbsp; time_taken,<br> &nbsp; &nbsp; crawled_links : [{ <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  title, <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  link_status, <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;   link,<br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  parent_link,<br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  text,<br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  html  <br> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  }] <br> }</strong> 
+        <br>
+        </li>
 </ul>
    
     
