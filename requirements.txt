@@ -1,12 +1,11 @@
-python 3.7
-PySocks 1.7.1
-beautifulsoup4 4.11.1
-urllib3 1.26.9
-bs4 0.0.1
-requests 2.27.1
-selenium 
-python-dotenv 0.20.0
-threaded 4.1.0
-wordcloud 1.8.1
-anytree 2.8.0
-lxml 4.8.0
+python == 3.7
+PySocks == 1.7.1
+beautifulsoup4 == 4.11.1
+urllib3 == 1.26.9
+bs4 == 0.0.1
+requests == 2.27.1
+python-dotenv == 0.20.0
+threaded == 4.1.0
+wordcloud == 1.8.1
+anytree == 2.8.0
+lxml == 4.8.0
