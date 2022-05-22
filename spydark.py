@@ -14,7 +14,7 @@ from crawler.darkweb.dfs import DFSDarkWebCrawler
 from crawler.surfaceweb.surfaceweb import SurfaceWebCrawler
 
 # Importing Google Web Crawler
-from crawler.surfaceweb.google import GoogleCrawler
+# from crawler.surfaceweb.google import GoogleCrawler
 
 # Importing Link Similarity
 from crawler.darkweb.similarity import link_similarity
@@ -153,41 +153,41 @@ elif args.surface:
     # Clear the images directory for storing new images 
     clear_results_directory()
 
-    if args.google:
+    # if args.google:
 
-        if args.url:
-            print('Google crawler can only take keyword')
-            quit()
+    #     if args.url:
+    #         print('Google crawler can only take keyword')
+    #         quit()
             
-        # Surface web object creation for Google
-        surface_web_object = GoogleCrawler(args.keyword, args.depth)
+    #     # Surface web object creation for Google
+    #     surface_web_object = GoogleCrawler(args.keyword, args.depth)
         
-        # Crawling
-        result = surface_web_object.crawl()
+    #     # Crawling
+    #     result = surface_web_object.crawl()
             
-        # Saving result into static/results.json
-        save_json(result)
+    #     # Saving result into static/results.json
+    #     save_json(result)
             
-        # Saving result into static/results.csv
-        save_csv(result)
+    #     # Saving result into static/results.csv
+    #     save_csv(result)
 
-    else:
+    # else:
         
-        if args.keyword:
-            print("Surface web crawling can only be done on keyword.")
-            quit()
+    if args.keyword:
+        print("Surface web crawling can only be done on keyword.")
+        quit()
 
-        # Surface web object creation for Google
-        surface_web_object = SurfaceWebCrawler(args.url, args.depth)
+    # Surface web object creation for Google
+    surface_web_object = SurfaceWebCrawler(args.url, args.depth)
 
-        # Crawling
-        result = surface_web_object.crawl()
+    # Crawling
+    result = surface_web_object.crawl()
 
-        # Saving result into static/results.json
-        save_json(result)
+    # Saving result into static/results.json
+    save_json(result)
             
-        # Saving result into static/results.csv
-        save_csv(result)
+    # Saving result into static/results.csv
+    save_csv(result)
         
 #     if args.google:
         

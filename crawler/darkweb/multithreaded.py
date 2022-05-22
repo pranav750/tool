@@ -194,7 +194,7 @@ class MultiThreadedDarkWebCrawler:
             print('Not Found Current Link ' + current_link)
             
             # Create a not found object and put it in database
-            self.scrape_info(False, None, current_link, parent_link)
+            self.scrape_info(False, None, current_link, parent_link, '')
 
     # Scrape the url and return the result
     def scrape_page(self, current_link, parent_link, headers, depth):
@@ -235,7 +235,7 @@ class MultiThreadedDarkWebCrawler:
                 depth = link_info['depth']
 
                 # Backup the data at every 1000 links data
-                if len(self.crawled_links) % 20 == 0 and len(self.crawled_links) > 0:
+                if len(self.crawled_links) % 1000 == 0 and len(self.crawled_links) > 0:
 
                     # Create final result
                     result = {
@@ -264,28 +264,30 @@ class MultiThreadedDarkWebCrawler:
                     job.add_done_callback(self.post_scrape_callback)
                     
             except Empty:
-                break
+
+                # End time of crawling
+                end_time = datetime.now()
+                
+                # Create word cloud
+                top_five_keywords = create_wordcloud(self.crawled_links)
+                
+                # Create link tree
+                link_tree_formation(self.crawled_links)
+                
+                #Create final result
+                result = {
+                    'link': self.base_url,
+                    'active_links': self.active_links,
+                    'inactive_links': self.inactive_links,
+                    'top_five_keywords': top_five_keywords,
+                    'time_taken': time_difference(start_time, end_time),
+                    'crawled_links': self.crawled_links
+                }
+                
+                return result
+
             except Exception as e:
                 print(e)
                 continue
         
-        # End time of crawling
-        end_time = datetime.now()
         
-        # Create word cloud
-        top_five_keywords = create_wordcloud(self.crawled_links)
-        
-        # Create link tree
-        link_tree_formation(self.crawled_links)
-        
-        #Create final result
-        result = {
-            'link': self.base_url,
-            'active_links': self.active_links,
-            'inactive_links': self.inactive_links,
-            'top_five_keywords': top_five_keywords,
-            'time_taken': time_difference(start_time, end_time),
-            'crawled_links': self.crawled_links
-        }
-        
-        return result
